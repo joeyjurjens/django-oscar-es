@@ -3,7 +3,7 @@ from oscar.core.loading import get_class
 
 
 class DjangoOscarEsConfig(AppConfig):
-    name = "apps.django_oscar_es"
+    name = "django_oscar_es"
     verbose_name = "Django Oscar Elasticsearch"
 
     def ready(self):
