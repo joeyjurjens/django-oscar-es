@@ -34,7 +34,7 @@ class ProductDocument(Document):
     categories = fields.NestedField(
         properties={
             "id": fields.IntegerField(),
-            "name": fields.TextField(),
+            "name": fields.KeywordField(),
             "description": fields.TextField(),
         }
     )
@@ -73,7 +73,7 @@ class ProductDocument(Document):
 
     attributes = fields.NestedField(
         properties={
-            "name": fields.KeywordField(),
+            "code": fields.KeywordField(),
             "value": fields.KeywordField(),
         }
     )
@@ -85,7 +85,7 @@ class ProductDocument(Document):
         for attribute_value in attribute_values:
             result.append(
                 {
-                    "name": attribute_value.attribute.name,
+                    "code": attribute_value.attribute.code,
                     "value": self.__attribute_value_to_representable_value(
                         attribute_value
                     ),
@@ -95,19 +95,12 @@ class ProductDocument(Document):
         return result
 
     def __purchase_info(self, instance):
-        if self._purchase_info is not None:
-            return self._purchase_info
-
         strategy = Selector().strategy()
 
         if instance.is_parent:
-            self._purchase_info = strategy.fetch_for_parent(instance)
+            return strategy.fetch_for_parent(instance)
         else:
-            self._purchase_info = strategy.fetch_for_product(instance)
-
-        return self._purchase_info
-
-    _purchase_info = None
+            return strategy.fetch_for_product(instance)
 
     def __attribute_value_to_representable_value(self, attribute_value):
         attribute = attribute_value.attribute
