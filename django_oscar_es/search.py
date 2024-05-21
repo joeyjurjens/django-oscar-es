@@ -2,12 +2,9 @@ import logging
 
 from elasticsearch_dsl import (
     FacetedSearch,
-    NestedFacet,
-    TermsFacet,
-    RangeFacet,
-    DateHistogramFacet,
+    FacetedResponse,
+    Search,
 )
-from django_elasticsearch_dsl import fields
 
 from oscar.core.loading import get_class, get_model
 
@@ -15,9 +12,26 @@ from .models import AttributeFacet, ESFieldFacet
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
-AttributeFacets = get_class("django_oscar_es.facets", "AttributeFacets")
 
 loggger = logging.getLogger(__name__)
+
+
+class PopulatedFacetedResponse(FacetedResponse):
+    """
+    This class changes the facets propert to include the facet object from the database.
+    """
+
+    @property
+    def facets(self):
+        facets = super().facets
+        for facet_name, facet in facets.items():
+            facets[facet_name] = {
+                "db_facet": self._faceted_search.facet_mapping[facet_name],
+                "values": facet,
+            }
+
+        print(facets.to_dict())
+        return facets
 
 
 class ProductFacetedSearch(FacetedSearch):
@@ -25,53 +39,31 @@ class ProductFacetedSearch(FacetedSearch):
     fields = ["title", "description"]
 
     def __init__(self, query=None, filters={}, sort=()):
+        self.facet_mapping = {}
         self.load_attribute_facets()
         self.load_es_fields_facet()
         super().__init__(query=query, filters=filters, sort=sort)
+
+    def search(self):
+        return Search(
+            doc_type=self.doc_types, index=self.index, using=self.using
+        ).response_class(PopulatedFacetedResponse)
 
     def load_es_fields_facet(self):
         """
         This method adds the configured ES fields facets to the facets list.
         """
-        for es_field in ESFieldFacet.objects.all():
-            if es_field.facet_type == ESFieldFacet.FACET_TYPE_TERM:
-                self.facets[es_field.field_name] = TermsFacet(field=es_field.field_name)
-            elif es_field.facet_type == ESFieldFacet.FACET_TYPE_RANGE:
-                self.facets[es_field.field_name] = RangeFacet(
-                    ranges=es_field.get_ranges(),
-                    field=es_field.field_name,
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown facet type '{es_field.facet_type}' for field '{es_field.field_name}'."
-                )
+        for es_field_facet in ESFieldFacet.objects.all():
+            es_facet_obj = es_field_facet.get_es_facet_obj()
+            self.facets[es_field_facet.field_name] = es_facet_obj
+            self.facet_mapping[es_field_facet.field_name] = es_field_facet
 
     def load_attribute_facets(self):
         """
         This method adds the configured attribute facets to the facets list.
         """
-        attribute_mapping = AttributeFacets.get_attributes_mapping_properties()
-        attribute_facets_map = AttributeFacets.attribute_facets_map()
 
-        for attribute_code, es_attribute_properties in attribute_mapping.items():
-            es_field_name = f"attribute_facets.{attribute_code}"
-            es_attribute_type = es_attribute_properties["type"]
-
-            # If the attribute is of type text, aggregate on the keyword field
-            if es_attribute_type == fields.Text().name:
-                es_field_name += ".keyword"
-
-            attribute_facet = attribute_facets_map[attribute_code]
-            facet_type = attribute_facet.facet_type
-
-            if facet_type == AttributeFacet.FACET_TYPE_TERM:
-                self.facets[attribute_code] = TermsFacet(field=es_field_name)
-            elif facet_type == AttributeFacet.FACET_TYPE_RANGE:
-                self.facets[attribute_code] = RangeFacet(
-                    ranges=attribute_facet.get_ranges(),
-                    field=es_field_name,
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown facet type '{facet_type}' for attribute '{attribute_code}'."
-                )
+        for attribute_facet in AttributeFacet.objects.all():
+            es_facet_obj = attribute_facet.get_es_facet_obj()
+            self.facets[attribute_facet.attribute_code] = es_facet_obj
+            self.facet_mapping[attribute_facet.attribute_code] = attribute_facet

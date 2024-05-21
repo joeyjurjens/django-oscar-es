@@ -3,10 +3,11 @@ from django_elasticsearch_dsl.documents import Document
 
 from oscar.core.loading import get_model, get_class
 
+from .models import AttributeFacet
+
 Product = get_model("catalogue", "Product")
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 Selector = get_class("partner.strategy", "Selector")
-AttributeFacets = get_class("django_oscar_es.facets", "AttributeFacets")
 
 
 class ProductDocument(Document):
@@ -73,15 +74,13 @@ class ProductDocument(Document):
         return purchase_info.availability.is_available_to_buy
 
     attribute_facets = fields.ObjectField(
-        properties=AttributeFacets.get_attributes_mapping_properties()
+        properties=AttributeFacet.get_es_attributes_mapping_properties()
     )
 
     def prepare_attribute_facets(self, instance):
         result = {}
 
-        attribute_values = instance.attribute_values.select_related("attribute").filter(
-            attribute__code__in=AttributeFacets.attribute_facets_map().keys()
-        )
+        attribute_values = instance.attribute_values.select_related("attribute").all()
         for attribute_value in attribute_values:
             result[attribute_value.attribute.code] = (
                 self.__attribute_value_to_representable_value(attribute_value)
