@@ -8,7 +8,7 @@ from elasticsearch_dsl import (
 
 from oscar.core.loading import get_class, get_model
 
-from .models import AttributeFacet, ESFieldFacet
+from .models import ProductFacet
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
@@ -29,8 +29,6 @@ class PopulatedFacetedResponse(FacetedResponse):
                 "db_facet": self._faceted_search.facet_mapping[facet_name],
                 "values": facet,
             }
-
-        print(facets.to_dict())
         return facets
 
 
@@ -40,8 +38,7 @@ class ProductFacetedSearch(FacetedSearch):
 
     def __init__(self, query=None, filters={}, sort=()):
         self.facet_mapping = {}
-        self.load_attribute_facets()
-        self.load_es_fields_facet()
+        self.load_product_facets()
         super().__init__(query=query, filters=filters, sort=sort)
 
     def search(self):
@@ -49,21 +46,12 @@ class ProductFacetedSearch(FacetedSearch):
             doc_type=self.doc_types, index=self.index, using=self.using
         ).response_class(PopulatedFacetedResponse)
 
-    def load_es_fields_facet(self):
+    def load_product_facets(self):
         """
-        This method adds the configured ES fields facets to the facets list.
-        """
-        for es_field_facet in ESFieldFacet.objects.all():
-            es_facet_obj = es_field_facet.get_es_facet_obj()
-            self.facets[es_field_facet.field_name] = es_facet_obj
-            self.facet_mapping[es_field_facet.field_name] = es_field_facet
-
-    def load_attribute_facets(self):
-        """
-        This method adds the configured attribute facets to the facets list.
+        This method adds the configured product facets to the facets list.
         """
 
-        for attribute_facet in AttributeFacet.objects.all():
-            es_facet_obj = attribute_facet.get_es_facet_obj()
-            self.facets[attribute_facet.attribute_code] = es_facet_obj
-            self.facet_mapping[attribute_facet.attribute_code] = attribute_facet
+        for product_facet in ProductFacet.objects.all():
+            es_facet_obj = product_facet.get_es_facet_obj()
+            self.facets[product_facet.field_name] = es_facet_obj
+            self.facet_mapping[product_facet.field_name] = product_facet

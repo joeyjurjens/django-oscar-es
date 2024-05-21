@@ -6,17 +6,19 @@
 {% block content %}
 <form method="get" action="">
     {% for facet_name, facet_data in results.facets.to_dict.items %}
-    <h3>{{ facet_data.db_facet.label }}</h3>
-    <ul>
-        {% for value, count, selected in facet_data.values %}
-        <li>
-            <label>
-                <input type="checkbox" name="{{ facet_name }}" value="{{ value }}" {% if selected %}checked{% endif %}>
-                {{ value }} ({{ count }})
-            </label>
-        </li>
-        {% endfor %}
-    </ul>
+        {% if facet_data.values|length > 0 %}
+        <h3>{{ facet_data.db_facet.label }}</h3>
+        <ul>
+            {% for value, count, selected in facet_data.values %}
+            <li>
+                <label>
+                    <input type="checkbox" name="{{ facet_name }}" value="{{ value }}" {% if selected %}checked{% endif %}>
+                    {{ value }} ({{ count }})
+                </label>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     {% endfor %}
     <button type="submit">Apply Filters</button>
 </form>

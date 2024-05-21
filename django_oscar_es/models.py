@@ -4,11 +4,11 @@ from elasticsearch_dsl import TermsFacet, RangeFacet
 from django_elasticsearch_dsl import fields
 
 from django.db import models
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from django.utils.html import format_html
 
 from oscar.core.loading import get_model, get_class
+
+from .validator import RangeFormatValidator
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 
@@ -44,10 +44,7 @@ class ProductElasicSearchConfiguration(models.Model):
         verbose_name_plural = _("Product ElasticSearch Configuration")
 
 
-class AbstractFacet(models.Model):
-    class Meta:
-        abstract = True
-
+class ProductFacet(models.Model):
     FACET_TYPE_TERM = "term"
     FACET_TYPE_RANGE = "range"
     FACET_TYPE_CHOICES = (
@@ -58,9 +55,10 @@ class AbstractFacet(models.Model):
     configuration = models.ForeignKey(
         ProductElasicSearchConfiguration,
         on_delete=models.CASCADE,
-        related_name="%(class)s_attribute_facets",
+        related_name="facets",
     )
 
+    field_name = models.CharField(max_length=255, choices=[("", "")], unique=True)
     facet_type = models.CharField(
         max_length=20,
         choices=FACET_TYPE_CHOICES,
@@ -71,6 +69,7 @@ class AbstractFacet(models.Model):
             "Enter the ranges for this facet. You can enter multiple ranges separated by comma. Each range should be in the format 'from|to'."
         ),
         blank=True,
+        validators=[RangeFormatValidator()],
     )
     label = models.CharField(
         max_length=255,
@@ -85,7 +84,7 @@ class AbstractFacet(models.Model):
     enabled_categories = models.ManyToManyField(
         "catalogue.Category",
         blank=True,
-        related_name="%(class)s_enabled_facets",
+        related_name="enabled_facets",
         help_text=_(
             "If this facet is for a specific set of categories, you can choose them here. If you leave this (and disabled categories) empty, the facet will be enabled for all categories."
         ),
@@ -93,56 +92,15 @@ class AbstractFacet(models.Model):
     disabled_categories = models.ManyToManyField(
         "catalogue.Category",
         blank=True,
-        related_name="%(class)s_disabled_facets",
+        related_name="disabled_facets",
         help_text=_(
             "If this facet should be hidden for a specific set of categories, you can choose them here. If you leave this (and disabled categories) empty, the facet will be enabled for all categories."
         ),
     )
 
-    def clean(self):
-        if self.facet_type == self.FACET_TYPE_RANGE:
-            self.validate_ranges_format()
-        super().clean()
-
-    def validate_ranges_format(self):
-        invalid_ranges = []
-        valid_example = (
-            "up to 25 |  | 24 <br>"
-            "25 tot 150 | 25 | 149 <br>"
-            "150 tot 300 | 150 | 299 <br>"
-            "300 of meer | 300 |"
-        )
-
-        for range_line in map(str.strip, self.ranges.split("\n")):
-            if not range_line:
-                continue
-
-            parts = range_line.split("|")
-            if len(parts) != 3:
-                invalid_ranges.append(range_line)
-                continue
-
-            label, min_value, max_value = map(str.strip, parts)
-
-            if (
-                not label
-                or (min_value and not min_value.isdigit())
-                or (max_value and not max_value.isdigit())
-            ):
-                invalid_ranges.append(range_line)
-
-        if invalid_ranges:
-            error_message = _(
-                "Invalid range format in the following lines: <br><br>"
-            ) + "<br>".join(invalid_ranges)
-            error_message += _(
-                "<br><br>The correct format is: <br> label | from | to.<br>"
-            )
-            error_message += (
-                _("<br>For example, this would be a valid list of ranges:<br>")
-                + valid_example
-            )
-            raise ValidationError({"ranges": format_html(error_message)})
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._meta.get_field("field_name").choices = self.get_field_name_choices()
 
     def get_ranges(self):
         ranges = []
@@ -160,58 +118,79 @@ class AbstractFacet(models.Model):
 
         return ranges
 
-
-class AttributeFacet(AbstractFacet):
-    """
-    This model allows you to create facets for products based on product attributes.
-    It loads the all attribute codes as choices, which a user can then configure.
-    """
-
-    attribute_code = models.CharField(max_length=255, choices=[("", "")], unique=True)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._meta.get_field("attribute_code").choices = (
-            self.get_attribute_code_choices()
-        )
-
-    def __str__(self):
-        return self.attribute_code
-
     def get_es_facet_obj(self):
         """
         Returns the correct ES facet object based on the facet type.
         """
+
         if self.facet_type == self.FACET_TYPE_TERM:
-            return TermsFacet(field=f"attributes.{self.attribute_code}")
+            return TermsFacet(field=self.field_name)
         elif self.facet_type == self.FACET_TYPE_RANGE:
-            return RangeFacet(
-                ranges=self.get_ranges(), field=f"attributes.{self.attribute_code}"
-            )
+            return RangeFacet(ranges=self.get_ranges(), field=self.field_name)
         else:
             raise NotImplementedError(
-                f"Unknown facet type '{self.facet_type}' for attribute '{self.attribute_code}'."
+                f"Unknown facet type '{self.facet_type}' for attribute '{self.field_name}'."
             )
 
     @classmethod
-    def get_attribute_code_choices(cls):
+    def get_field_name_choices(cls):
+        return [("", "")] + cls.get_es_field_choices() + cls.get_attribute_choices()
+
+    @classmethod
+    def get_es_field_choices(self):
         """
-        Returns all attribute codes that are inside the product index mapping.
+        Returns all fields that are able to be faceted on from the product document mapping.
         """
-        field_choices = [("", "")]
+        ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
+
+        choices = []
+
+        es_document_properties = ProductDocument._doc_type.mapping.properties.to_dict()
+        for es_property in es_document_properties.values():
+            for es_field_name, es_field_properties in es_property.items():
+                es_field_type = es_field_properties["type"]
+
+                # Fields of type text can't be aggregated
+                if es_field_type == "text":
+
+                    # Check if there is a subfield of type keyword, if so, we can use that for aggregation.
+                    subfields = es_field_properties.get("fields", {})
+                    for subfield_name, subfield_properties in subfields.items():
+                        if subfield_properties["type"] == "keyword":
+                            aggregate_field_name = f"{es_field_name}.{subfield_name}"
+                            choices.append(
+                                (
+                                    aggregate_field_name,
+                                    f"[field] {es_field_name} ({es_field_name}.{subfield_name})",
+                                )
+                            )
+                            break
+
+                    # At this point, we did not find a subfield of type keyword, so we check if fielddata is set to true.
+                    # If it is, we can use the actual field for aggregation, but it's not recommened due to high memory usage.
+                    if es_field_properties.get("fielddata") is True:
+                        if es_field_properties.get("fielddata") is True:
+                            choices.append((es_field_name, f"[field] {es_field_name}"))
+                else:
+                    choices.append((es_field_name, f"[field] {es_field_name}"))
+
+        return choices
+
+    @classmethod
+    def get_attribute_choices(cls):
+        choices = []
         es_attributes_mapping_properties = cls.get_es_attributes_mapping_properties()
         for attribute_code in es_attributes_mapping_properties.keys():
-            field_choices.append((attribute_code, attribute_code))
-        return field_choices
+            choices.append(
+                (f"attributes.{attribute_code}", f"[attribute] {attribute_code}")
+            )
+        return choices
 
     @classmethod
     def get_es_attributes_mapping_properties(cls):
         """
         Returns the ES mapping properties for the attribute facets.
         """
-        if cls.cached_es_attributes_mapping_properties is not None:
-            return cls.cached_es_attributes_mapping_properties
-
         properties = {}
 
         for attribute in ProductAttribute.objects.all():
@@ -239,11 +218,7 @@ class AttributeFacet(AbstractFacet):
                     "keyword": fields.KeywordField()
                 }
 
-        cls.cached_es_attributes_mapping_properties = properties
-        return cls.cached_es_attributes_mapping_properties
-
-    # Caching, so we don't keep querying the database for the same data.
-    cached_es_attributes_mapping_properties = None
+        return properties
 
     @classmethod
     def attribute_type_to_es_type(cls, attribute):
@@ -260,66 +235,3 @@ class AttributeFacet(AbstractFacet):
         elif attribute.type == attribute.FLOAT:
             return fields.Float()
         return fields.Keyword()
-
-
-class ESFieldFacet(AbstractFacet):
-    """
-    This model allows you to create facets for products based on ElasticSearch fields.
-    """
-
-    field_name = models.CharField(max_length=255, choices=[("", "")], unique=True)
-
-    def __str__(self):
-        return self.field_name
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._meta.get_field("field_name").choices = self.get_field_name_choices()
-
-    def get_es_facet_obj(self):
-        """
-        Returns the correct ES facet object based on the facet type.
-        """
-        if self.facet_type == self.FACET_TYPE_TERM:
-            return TermsFacet(field=self.field_name)
-        elif self.facet_type == self.FACET_TYPE_RANGE:
-            return RangeFacet(ranges=self.get_ranges(), field=self.field_name)
-        else:
-            raise NotImplementedError(
-                f"Unknown facet type '{self.facet_type}' for field '{self.field_name}'."
-            )
-
-    @classmethod
-    def get_field_name_choices(cls):
-        """
-        Returns all field names that are able to be faceted on from the product document mapping.
-        """
-        ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
-
-        field_choices = [("", "")]
-
-        es_document_properties = ProductDocument._doc_type.mapping.properties.to_dict()
-        for es_property in es_document_properties.values():
-            for es_field_name, es_field_properties in es_property.items():
-                es_field_type = es_field_properties["type"]
-
-                # Fields of type text can't be aggregated
-                if es_field_type == "text":
-
-                    # Check if there is a subfield of type keyword, if so, we can use that for aggregation.
-                    subfields = es_field_properties.get("fields", {})
-                    for subfield_name, subfield_properties in subfields.items():
-                        if subfield_properties["type"] == "keyword":
-                            aggregate_field_name = f"{es_field_name}.{subfield_name}"
-                            field_choices.append((aggregate_field_name, es_field_name))
-                            break
-
-                    # At this point, we did not find a subfield of type keyword, so we check if fielddata is set to true.
-                    # If it is, we can use the actual field for aggregation, but it's not recommened due to high memory usage.
-                    if es_field_properties.get("fielddata") is True:
-                        if es_field_properties.get("fielddata") is True:
-                            field_choices.append((es_field_name, es_field_name))
-                else:
-                    field_choices.append((es_field_name, es_field_name))
-
-        return field_choices
