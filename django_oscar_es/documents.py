@@ -4,8 +4,9 @@ from django_elasticsearch_dsl.documents import Document
 from oscar.core.loading import get_model, get_class
 
 Product = get_model("catalogue", "Product")
-
+ProductAttribute = get_model("catalogue", "ProductAttribute")
 Selector = get_class("partner.strategy", "Selector")
+AttributeFacets = get_class("django_oscar_es.facets", "AttributeFacets")
 
 
 class ProductDocument(Document):
@@ -71,25 +72,17 @@ class ProductDocument(Document):
         purchase_info = self.__purchase_info(instance)
         return purchase_info.availability.is_available_to_buy
 
-    attributes = fields.NestedField(
-        properties={
-            "code": fields.KeywordField(),
-            "value": fields.KeywordField(),
-        }
+    attribute_facets = fields.ObjectField(
+        properties=AttributeFacets.get_attributes_mapping_properties()
     )
 
-    def prepare_attributes(self, instance):
-        attribute_values = instance.attribute_values.all()
-        result = []
+    def prepare_attribute_facets(self, instance):
+        result = {}
 
+        attribute_values = instance.attribute_values.select_related("attribute").all()
         for attribute_value in attribute_values:
-            result.append(
-                {
-                    "code": attribute_value.attribute.code,
-                    "value": self.__attribute_value_to_representable_value(
-                        attribute_value
-                    ),
-                }
+            result[attribute_value.attribute.code] = (
+                self.__attribute_value_to_representable_value(attribute_value)
             )
 
         return result
