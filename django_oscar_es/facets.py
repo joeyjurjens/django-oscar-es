@@ -6,9 +6,6 @@ from oscar.core.loading import get_model
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 
-CACHE_TIMEOUT = 60 * 60
-CACHE_KEY = "product_attribute_es_facets"
-
 
 class AttributeFacets:
     """
@@ -19,9 +16,9 @@ class AttributeFacets:
     CACHE_TIMEOUT = 60 * 60
     CACHE_KEY = "product_attribute_es_facets"
 
-    @staticmethod
-    def get_attribute_facets():
-        attributes = cache.get(AttributeFacets.CACHE_KEY)
+    @classmethod
+    def get_attribute_facets(cls):
+        attributes = cache.get(cls.CACHE_KEY)
         if not attributes:
             attributes = list(ProductAttribute.objects.all())
             cache.set(
@@ -29,8 +26,8 @@ class AttributeFacets:
             )
         return attributes
 
-    @staticmethod
-    def attribute_type_to_es_type(attribute):
+    @classmethod
+    def attribute_type_to_es_type(cls, attribute):
         if attribute.type in [attribute.TEXT, attribute.OPTION, attribute.MULTI_OPTION]:
             return fields.Keyword()
         elif attribute.type == attribute.RICHTEXT:
@@ -45,11 +42,11 @@ class AttributeFacets:
             return fields.Float()
         return fields.Text()
 
-    @staticmethod
-    def get_attributes_mapping_properties():
+    @classmethod
+    def get_attributes_mapping_properties(cls):
         properties = {}
-        for attribute in AttributeFacets.get_attribute_facets():
-            es_type = AttributeFacets.attribute_type_to_es_type(attribute).name
+        for attribute in cls.get_attribute_facets():
+            es_type = cls.attribute_type_to_es_type(attribute).name
 
             # If the same attribute code already exists in the properties, we must ensure that the
             # type is the same. Otherwise it fails to index. If it's not the same, we'll make it a keyword type.
