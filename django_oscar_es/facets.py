@@ -1,8 +1,11 @@
 from django.core.cache import cache
+from django.db.utils import OperationalError
 
 from django_elasticsearch_dsl import fields
 
 from oscar.core.loading import get_model
+
+from .models import AttributeFacet
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 
@@ -13,18 +16,54 @@ class AttributeFacets:
     It is loaded with get_class, so it's possible to override it in your own project.
     """
 
-    CACHE_TIMEOUT = 60 * 60
-    CACHE_KEY = "product_attribute_es_facets"
+    # To prevent database queries every time a user lands on the product list page, we cache the attribute facets.
+    # The cache is invalidated every 24 hours or whenever a new attribute facet was created.
+    ATTRIBUTE_FACETS_MAP_CACHE_KEY = "attribute_facets_map"
+    FACET_ATTRIBUTES_CACHE_KEY = "facet_attributes"
+    CACHE_TIMEOUT = 60 * 60 * 24
 
     @classmethod
-    def get_attribute_facets(cls):
-        attributes = cache.get(cls.CACHE_KEY)
-        if not attributes:
-            attributes = list(ProductAttribute.objects.all())
+    def attribute_facets_map(cls):
+        """
+        Returns the AttributeFacet instances mapped by attribute code.
+        """
+        attribute_facets = cache.get(cls.ATTRIBUTE_FACETS_MAP_CACHE_KEY)
+        if not attribute_facets:
+            try:
+                attribute_facets = {
+                    facet.attribute_code: facet
+                    for facet in AttributeFacet.objects.all()
+                }
+            # A bit ugly, but when this app is just added migrations haven't been ran yet.
+            # And the django_elasticsearch_dsl has a autodiscover module on documents.py which uses this class.
+            except OperationalError:
+                return {}
+
             cache.set(
-                AttributeFacets.CACHE_KEY, attributes, AttributeFacets.CACHE_TIMEOUT
+                key=cls.ATTRIBUTE_FACETS_MAP_CACHE_KEY,
+                value=attribute_facets,
+                timeout=cls.CACHE_TIMEOUT,
             )
-        return attributes
+        return attribute_facets
+
+    @classmethod
+    def facet_attributes(cls):
+        """
+        Returns the ProductAttribute instances that are used for faceting.
+        """
+        facet_attributes = cache.get(cls.FACET_ATTRIBUTES_CACHE_KEY)
+        if not facet_attributes:
+            facet_attributes = list(
+                ProductAttribute.objects.filter(
+                    code__in=cls.attribute_facets_map().keys()
+                )
+            )
+            cache.set(
+                key=cls.FACET_ATTRIBUTES_CACHE_KEY,
+                value=facet_attributes,
+                timeout=cls.CACHE_TIMEOUT,
+            )
+        return facet_attributes
 
     @classmethod
     def attribute_type_to_es_type(cls, attribute):
@@ -45,24 +84,23 @@ class AttributeFacets:
     @classmethod
     def get_attributes_mapping_properties(cls):
         properties = {}
-        for attribute in cls.get_attribute_facets():
-            es_type = cls.attribute_type_to_es_type(attribute).name
 
-            # If the same attribute code already exists in the properties, we must ensure that the
-            # type is the same. Otherwise it fails to index. If it's not the same, we'll make it a keyword type.
-            if attribute.code in properties:
-                if properties[attribute.code]["type"] != es_type:
-                    properties[attribute.code] = {
+        for attribute in cls.facet_attributes():
+            es_type = cls.attribute_type_to_es_type(attribute).name
+            attribute_code = attribute.code
+
+            if attribute_code in properties:
+                if properties[attribute_code]["type"] != es_type:
+                    properties[attribute_code] = {
                         "type": fields.Keyword().name,
                     }
             else:
-                properties[attribute.code] = {
+                properties[attribute_code] = {
                     "type": es_type,
                 }
 
-            # If the attribute is a text type, we must add a keyword field to it, otherwise we can't aggregate it.
-            if properties[attribute.code]["type"] == fields.Text().name:
-                properties[attribute.code]["fields"] = {
+            if properties[attribute_code]["type"] == fields.Text().name:
+                properties[attribute_code]["fields"] = {
                     "keyword": fields.KeywordField()
                 }
 

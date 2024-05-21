@@ -1,0 +1,48 @@
+{% extends "oscar/layout_2_col.html" %}
+
+{% block column_left %}
+{% endblock %}
+
+{% block content %}
+    <form method="get" action="">
+        <ul>
+        {% for facet_name, facet_values in results.facets.items %}
+        
+            
+            {# Attributes are nested facets, so rendered differently #}
+            {% if facet_name == 'attributes' %}
+                {% for tag, count, nested_facet_values in facet_values %}
+                    <li>{{ tag }} ({{ count }})</li>
+                    
+                    <ul>
+                    {% for facet in nested_facet_values %}
+                    <li>
+                        <label>
+                            <input type="checkbox" name="{{ facet_name }}:{{ facet.key }}" value="{{ facet.key }}" {% if facet.selected %}checked{% endif %}>
+                            {{ facet.key }} ({{ facet.doc_count }})
+                        </label>
+                    </li>
+                    {% endfor %}
+                    </ul>
+                {% endfor %}
+            
+            {% endif %}
+            
+            {% if facet_name != 'attributes' and facet_name != 'filtered_attributes' %}
+                <li>{{ facet_name }}</li>
+                
+                <ul>
+                {% for tag, count, selected in facet_values %}
+                    <li>
+                        <label>
+                            <input type="checkbox" name="{{ facet_name }}" value="{{ tag }}" {% if selected %}checked{% endif %}>
+                            {{ tag }} ({{ count }})
+                        </label>
+                    </li>
+                {% endfor %}
+            {% endif %}
+            </ul>
+        {% endfor %}
+        </ul>
+    </form>
+{% endblock %}

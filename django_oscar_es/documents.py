@@ -79,7 +79,9 @@ class ProductDocument(Document):
     def prepare_attribute_facets(self, instance):
         result = {}
 
-        attribute_values = instance.attribute_values.select_related("attribute").all()
+        attribute_values = instance.attribute_values.select_related("attribute").filter(
+            attribute__code__in=AttributeFacets.attribute_facets_map().keys()
+        )
         for attribute_value in attribute_values:
             result[attribute_value.attribute.code] = (
                 self.__attribute_value_to_representable_value(attribute_value)
