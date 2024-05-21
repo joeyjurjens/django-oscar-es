@@ -48,7 +48,7 @@ class AttributeFacets:
     @staticmethod
     def get_attributes_mapping_properties():
         properties = {}
-        for attribute in ProductAttribute.objects.all():
+        for attribute in AttributeFacets.get_attribute_facets():
             es_type = AttributeFacets.attribute_type_to_es_type(attribute).name
 
             # If the same attribute code already exists in the properties, we must ensure that the
