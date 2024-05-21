@@ -4,6 +4,7 @@ from django_elasticsearch_dsl.documents import Document
 from oscar.core.loading import get_model, get_class
 
 from .models import ProductFacet
+from .es_fields import ProductAttributesField
 
 Product = get_model("catalogue", "Product")
 ProductAttribute = get_model("catalogue", "ProductAttribute")
@@ -73,9 +74,7 @@ class ProductDocument(Document):
         purchase_info = self.__purchase_info(instance)
         return purchase_info.availability.is_available_to_buy
 
-    attributes = fields.ObjectField(
-        properties=ProductFacet.get_es_attributes_mapping_properties()
-    )
+    attributes = ProductAttributesField()
 
     def prepare_attributes(self, instance):
         result = {}
