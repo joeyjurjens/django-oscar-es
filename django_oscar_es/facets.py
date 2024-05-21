@@ -79,7 +79,7 @@ class AttributeFacets:
             return fields.Integer()
         elif attribute.type == attribute.FLOAT:
             return fields.Float()
-        return fields.Text()
+        return fields.Keyword()
 
     @classmethod
     def get_attributes_mapping_properties(cls):

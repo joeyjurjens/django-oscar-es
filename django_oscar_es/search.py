@@ -11,7 +11,7 @@ from django_elasticsearch_dsl import fields
 
 from oscar.core.loading import get_class, get_model
 
-from .models import AttributeFacet
+from .models import AttributeFacet, ESFieldFacet
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
@@ -23,14 +23,28 @@ loggger = logging.getLogger(__name__)
 class ProductFacetedSearch(FacetedSearch):
     doc_types = [ProductDocument]
     fields = ["title", "description"]
-    facets = {
-        "categories": NestedFacet("categories", TermsFacet(field="categories.name")),
-        "num_in_stock": TermsFacet(field="num_in_stock"),
-    }
 
     def __init__(self, query=None, filters={}, sort=()):
         self.load_attribute_facets()
+        self.load_es_fields_facet()
         super().__init__(query=query, filters=filters, sort=sort)
+
+    def load_es_fields_facet(self):
+        """
+        This method adds the configured ES fields facets to the facets list.
+        """
+        for es_field in ESFieldFacet.objects.all():
+            if es_field.facet_type == ESFieldFacet.FACET_TYPE_TERM:
+                self.facets[es_field.field_name] = TermsFacet(field=es_field.field_name)
+            elif es_field.facet_type == ESFieldFacet.FACET_TYPE_RANGE:
+                self.facets[es_field.field_name] = RangeFacet(
+                    ranges=es_field.get_ranges(),
+                    field=es_field.field_name,
+                )
+            else:
+                raise NotImplementedError(
+                    f"Unknown facet type '{es_field.facet_type}' for field '{es_field.field_name}'."
+                )
 
     def load_attribute_facets(self):
         """
@@ -53,13 +67,11 @@ class ProductFacetedSearch(FacetedSearch):
             if facet_type == AttributeFacet.FACET_TYPE_TERM:
                 self.facets[attribute_code] = TermsFacet(field=es_field_name)
             elif facet_type == AttributeFacet.FACET_TYPE_RANGE:
-                # ToDo: If the field is not numeric, ES is being very weird regarding results.
                 self.facets[attribute_code] = RangeFacet(
                     ranges=attribute_facet.get_ranges(),
                     field=es_field_name,
                 )
             else:
-                loggger.warning(
+                raise NotImplementedError(
                     f"Unknown facet type '{facet_type}' for attribute '{attribute_code}'."
                 )
-                continue

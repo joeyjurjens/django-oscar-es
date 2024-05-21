@@ -22,7 +22,7 @@ class ProductDocument(Document):
 
     _all_text = fields.TextField()
 
-    title = fields.TextField(attr="title")
+    title = fields.TextField(attr="title", fields={"raw": fields.KeywordField()})
     description = fields.TextField(attr="description")
     is_public = fields.BooleanField(attr="is_public")
     upc = fields.KeywordField(attr="upc")
