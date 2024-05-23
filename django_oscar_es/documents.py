@@ -3,7 +3,6 @@ from django_elasticsearch_dsl.documents import Document
 
 from oscar.core.loading import get_model, get_class
 
-from .models import ProductFacet
 from .es_fields import ProductAttributesField
 
 Product = get_model("catalogue", "Product")
@@ -21,6 +20,15 @@ class ProductDocument(Document):
 
     class Django:
         model = Product
+
+    def get_queryset(self):
+        # Improve performance by selecting related models in one sql query
+        return (
+            super()
+            .get_queryset()
+            .select_related("parent")
+            .prefetch_related("attribute_values", "attribute_values__attribute")
+        )
 
     _all_text = fields.TextField()
 
@@ -79,7 +87,7 @@ class ProductDocument(Document):
     def prepare_attributes(self, instance):
         result = {}
 
-        attribute_values = instance.attribute_values.select_related("attribute").all()
+        attribute_values = instance.attribute_values.all()
         for attribute_value in attribute_values:
             result[attribute_value.attribute.code] = (
                 self.__attribute_value_to_representable_value(attribute_value)

@@ -1,7 +1,6 @@
 import logging
 
 from elasticsearch_dsl import TermsFacet, RangeFacet
-from django_elasticsearch_dsl import fields
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
