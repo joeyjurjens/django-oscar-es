@@ -1,9 +1,13 @@
+import logging
+
 from django.views.generic import View
 from django.shortcuts import render
 
 from .faceted_search import CatalogueRootFacetedSearch, DynamicFacetedSearch
 from .forms import FacetForm, CatalogueForm
-from .form_fields import TermsFacetField, RangeFacetField, ESFilterFormField
+from .form_fields import FacetField, ESFilterFormField
+
+logger = logging.getLogger(__name__)
 
 
 class ESFacetedSearchView(View):
@@ -56,26 +60,46 @@ class ESFacetedSearchView(View):
         self._form = form_class()
         return self._form
 
+    def clean_form_data(self, form_data):
+        """
+        This method removes empty values from the raw form data (GET params). It also makes sure
+        that the value is retrieved by the request.GET.getlist(key) method. As we have no way of
+        getting cleaned_form data without doing two ES queries (which we don't want), this is the way to go.
+        """
+        cleaned_data = {}
+        for key in form_data:
+            values = form_data.getlist(key)
+            if values:
+                cleaned_data[key] = values
+        return cleaned_data
+
     def get_es_response(self, form):
         faceted_search = self.get_faceted_search()
+        form = self.get_form()
 
-        # Apply GET parameters as ES query filters
-        for key in self.request.GET:
+        # No filters to apply
+        if not form.data:
+            return faceted_search.execute()
+
+        # Apply filters before executing the search based on the form data
+        cleaned_form_data = self.clean_form_data(form.data)
+        for key, value in cleaned_form_data.items():
+            # Fuck off
             if key not in form.fields:
                 continue
 
             form_field = form.fields[key]
-            values = self.request.GET.getlist(key)
-
-            # The TermsFacetField is quite simple, we can just use the values as is
-            if isinstance(form_field, TermsFacetField):
-                faceted_search.add_filter(form_field.es_field, values)
-            elif isinstance(form_field, RangeFacetField):
-                # ToDo: Implement this.
-                pass
+            if isinstance(form_field, FacetField):
+                try:
+                    faceted_search.add_filter(
+                        form_field.es_field, form_field.get_es_filter_value(value)
+                    )
+                except KeyError:
+                    logger.warning(
+                        "Could not apply filter for field %s. This is likely because of an invalid query parameter for this facet.",
+                        form_field.es_field,
+                    )
             elif isinstance(form_field, ESFilterFormField):
-                # ToDo: Implement this. For this field we also need a way to add regular filters to the FacetedSearch class
-                # As it doesn't support this now, they mainly thought about facets ONLY.
                 pass
 
         response = faceted_search.execute()

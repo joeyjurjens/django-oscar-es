@@ -4,8 +4,29 @@
 {% endblock %}
 
 {% block content %}
-<form method="get" action="">
+<form id="facet-filer-form" method="get" action="">
     {{ es_form }}
     <button type="submit">Apply Filters</button>
 </form>
+{% endblock %}
+
+{% block extrascripts %}
+    {{ block.super }}
+    <script>
+        // ToDo: Once the backend implementation is done. We need to update this script to make an AJAX request to the backend.
+        // and update the results and facets without needing to do a page reload.
+        document.addEventListener("DOMContentLoaded", function() {
+            var form = document.getElementById("facet-filer-form");
+            form.addEventListener("change", function(event) {
+                var target = event.target;
+                if (target.type === "checkbox" || target.type === "radio") {
+                    form.submit();
+                    var inputs = form.querySelectorAll("input, select, textarea");
+                    inputs.forEach(function(input) {
+                        input.disabled = true;
+                    });
+                }
+            });
+        });
+    </script>
 {% endblock %}

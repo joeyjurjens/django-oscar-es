@@ -1,10 +1,8 @@
 import logging
 
-from elasticsearch_dsl import FacetedSearch, FacetedResponse, Search, Range
+from elasticsearch_dsl import FacetedSearch, FacetedResponse, Search
 
 from oscar.core.loading import get_class, get_model
-
-from .models import ProductFacet
 
 ProductAttribute = get_model("catalogue", "ProductAttribute")
 ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
@@ -12,7 +10,7 @@ ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
 loggger = logging.getLogger(__name__)
 
 
-class PopulatedFacetedResponse(FacetedResponse):
+class MetadataFacetedResponse(FacetedResponse):
     """
     This class changes the facets property to include the facet object from the database.
     """
@@ -20,7 +18,8 @@ class PopulatedFacetedResponse(FacetedResponse):
     @property
     def facets(self):
         facets = super().facets
-        # ToDo: Populate the facet with dbfacet obj
+        # ToDo: Add extra metadata to the facets, which then in return can be used when rendering
+        # the facet form fields in the template.
         return facets
 
 
@@ -36,7 +35,7 @@ class DynamicFacetedSearch(FacetedSearch):
 
     def search(self):
         search = Search(doc_type=self.doc_types, index=self.index, using=self.using)
-        return search.response_class(PopulatedFacetedResponse)
+        return search.response_class(MetadataFacetedResponse)
 
     def execute(self):
         """
