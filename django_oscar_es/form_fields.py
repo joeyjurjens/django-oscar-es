@@ -1,9 +1,8 @@
 from elasticsearch_dsl import Q, Facet, TermsFacet, RangeFacet
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-
-from abc import ABC, abstractmethod
 
 
 class FacetField(forms.MultipleChoiceField):
@@ -12,6 +11,19 @@ class FacetField(forms.MultipleChoiceField):
         if not "required" in kwargs:
             kwargs["required"] = False
         super().__init__(**kwargs)
+
+    def validate(self, value):
+        """
+        Removed the check for valid choices, as this is too complex for FacetFields.
+        Those choices are populated from the ES response and in order to do the ES query,
+        we need to access cleaned_data from already potential faceted fields. We can't access
+        cleaned_data if the form complains about invalid choices. If we don't remove this
+        check, we have to do TWO queries to ES, one to get the available choices and one to
+        get the actual results. This is not efficient and it doesn't really matter if there
+        are invalid choices anyways.
+        """
+        if self.required and not value:
+            raise ValidationError(self.error_messages["required"], code="required")
 
     def get_es_filter_value(self, raw_value):
         """
@@ -26,6 +38,21 @@ class FacetField(forms.MultipleChoiceField):
             "You need to implement the method get_es_facet in your subclass."
         )
 
+    def process_facet_buckets(self, buckets):
+        """
+        This method processes the ES facet bucket from the response and updates the available choices.
+        A bucket look likes this: [(0, 11, False), (23, 8, False), (7, 6, False)]
+        """
+        choices = []
+        for bucket in buckets:
+            key, doc_count, _ = bucket
+            choices.append((key, self.format_choice_label(key, doc_count)))
+        self.choices = choices
+
+    def format_choice_label(self, key, doc_count):
+        # ToDo: Allow label formatters for displayable facet keys
+        return f"{key} ({doc_count})"
+
 
 class TermsFacetField(FacetField):
     """
@@ -39,13 +66,11 @@ class TermsFacetField(FacetField):
 
 
 class RangeOption(dict):
-    def __init__(self, lower=None, upper=None, label=None, formatter=None):
+    def __init__(self, lower=None, upper=None, label=None):
         if not lower and not upper:
             raise ValueError("Either lower or upper must be provided")
 
-        super().__init__(
-            {"from": lower, "to": upper, "label": label, "formatter": formatter}
-        )
+        super().__init__({"from": lower, "to": upper, "label": label})
 
 
 class RangeFacetField(FacetField):
@@ -75,23 +100,45 @@ class RangeFacetField(FacetField):
         ]
         return RangeFacet(field=self.es_field, ranges=ranges)
 
-
-class ESFilterFormField(ABC):
-    @abstractmethod
-    def get_es_filter_query(self, data) -> Q:
+    def process_facet_buckets(self, buckets):
         """
-        This method should return a Q(uery) object based on the passed data.
+        This method is overriden from the FacetField class to make use of
+        the potential RangeOption label and formatter. Also if the doc_count is 0,
+        we don't want to show the range option.
         """
-        pass
+        choices = []
+        for bucket in buckets:
+            key, doc_count, _ = bucket
+            if doc_count > 0:
+                range_option = self.ranges.get(key)
+                label = range_option.get("label", key) if range_option else key
+                choices.append((key, self.format_choice_label(label, doc_count)))
+        self.choices = choices
 
 
-class PriceInputField(forms.MultiValueField, ESFilterFormField):
-    widget = forms.MultiWidget(
-        widgets=[
+class FilterFormField:
+    def get_es_filter_query(self, cleaned_data) -> Q:
+        raise NotImplementedError(
+            "You need to implement the method get_es_filter_query in your subclass."
+        )
+
+
+class PriceInputWidget(forms.MultiWidget):
+    def __init__(self, attrs=None):
+        widgets = [
             forms.NumberInput(attrs={"placeholder": _("Min price")}),
             forms.NumberInput(attrs={"placeholder": _("Max price")}),
         ]
-    )
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value:
+            return [value[0], value[1]]
+        return [None, None]
+
+
+class PriceInputField(forms.MultiValueField, FilterFormField):
+    widget = PriceInputWidget
 
     def __init__(self, *args, **kwargs):
         fields = [
@@ -101,18 +148,9 @@ class PriceInputField(forms.MultiValueField, ESFilterFormField):
         super().__init__(fields, *args, **kwargs)
 
     def compress(self, data_list):
-        range_filter = {}
-        if data_list:
-            if data_list[0] is not None:
-                range_filter["gte"] = data_list[0]
-            if data_list[1] is not None:
-                range_filter["lte"] = data_list[1]
-        return range_filter
+        return data_list
 
-    def get_es_filter_query(self):
-        data = self.cleaned_data
-        if data:
-            price_range = self.compress(data)
-            if price_range:
-                return Q("range", price=price_range)
+    def get_es_filter_query(self, cleaned_data):
+        if cleaned_data:
+            return Q("range", price={"gte": cleaned_data[0], "lte": cleaned_data[1]})
         return None

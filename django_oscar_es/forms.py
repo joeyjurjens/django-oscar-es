@@ -1,16 +1,18 @@
 from django import forms
+from django.forms.utils import ErrorDict
 
 from .form_fields import (
     FacetField,
-    RangeFacetField,
     TermsFacetField,
-    RangeOption,
+    PriceInputField,
 )
 
 
 class FacetForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Always have it accessible, even if it's empty (easier to do stuff with ES).
+        self.cleaned_data = {}
 
     def process_es_facets(self, facets):
         """
@@ -45,17 +47,7 @@ class FacetForm(forms.Form):
 
 
 class CatalogueForm(FacetForm):
-    # price = PriceInputField(required=False)
-    price = RangeFacetField(
-        "price",
-        ranges=[
-            RangeOption(lower=0, upper=10, label="0 tot 10"),
-            RangeOption(lower=10, upper=20, label="10 tot 20"),
-            RangeOption(lower=20, upper=30, label="20 tot 30"),
-            RangeOption(lower=30, upper=40, label="30 tot 40"),
-            RangeOption(lower=40, label="40 of meer"),
-        ],
-    )
+    price = PriceInputField(required=False)
     num_stock = TermsFacetField("num_in_stock")
 
     def __init__(self, *args, **kwargs):
