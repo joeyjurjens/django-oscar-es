@@ -103,7 +103,7 @@ class RangeFacetField(FacetField):
     def process_facet_buckets(self, buckets):
         """
         This method is overriden from the FacetField class to make use of
-        the potential RangeOption label and formatter. Also if the doc_count is 0,
+        the potential RangeOption label. Also if the doc_count is 0,
         we don't want to show the range option.
         """
         choices = []

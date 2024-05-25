@@ -14,26 +14,6 @@ class FacetForm(forms.Form):
         # Always have it accessible, even if it's empty (easier to do stuff with ES).
         self.cleaned_data = {}
 
-    def process_es_facets(self, facets):
-        """
-        Because available facets are returned from ES. We need to update the available choices
-        for our facet fields. That's what this method does, it takes the facets from the ES response
-        and updates the choices for the form fields.
-        """
-        for field_name, field in self.fields.items():
-            if not field.es_field in facets:
-                continue
-
-            if isinstance(field, FacetField):
-                choices = []
-                for bucket in facets[field.es_field]:
-                    key, doc_count, _ = bucket
-                    # ToDo: Allow label formatters for displayable facet keys
-                    label = f"{key} ({doc_count})"
-                    choices.append((key, label))
-
-                self.fields[field_name].choices = choices
-
     def get_es_facets(self):
         """
         This returns all Facet objects from the form fields. Those facets are then passed
