@@ -12,6 +12,11 @@ class FacetField(forms.MultipleChoiceField):
             kwargs["required"] = False
         super().__init__(**kwargs)
 
+    def get_es_facet(self) -> Facet:
+        raise NotImplementedError(
+            "You need to implement the method get_es_facet in your subclass."
+        )
+
     def validate(self, value):
         """
         Removed the check for valid choices, as this is too complex for FacetFields.
@@ -32,11 +37,6 @@ class FacetField(forms.MultipleChoiceField):
         it just is the value that will be used as the filter value.
         """
         return raw_value
-
-    def get_es_facet(self) -> Facet:
-        raise NotImplementedError(
-            "You need to implement the method get_es_facet in your subclass."
-        )
 
     def process_facet_buckets(self, buckets):
         """

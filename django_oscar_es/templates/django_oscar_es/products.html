@@ -5,6 +5,9 @@
 
 {% block content %}
 <form id="facet-filer-form" method="get" action="">
+
+    {{ es_response.hits.total.value }} results found
+
     {{ es_form.as_p }}
     <button type="submit">Apply Filters</button>
 </form>

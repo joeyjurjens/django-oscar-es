@@ -28,7 +28,8 @@ class FacetForm(forms.Form):
 
 class CatalogueForm(FacetForm):
     price = PriceInputField(required=False)
-    num_stock = TermsFacetField("num_in_stock")
+    author = TermsFacetField("attributes.author")
+    size = TermsFacetField("attributes.size")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

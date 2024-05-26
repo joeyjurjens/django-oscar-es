@@ -71,7 +71,9 @@ class ESFacetedSearchView(View):
 
         # No filters to apply
         if not form.cleaned_data:
-            return faceted_search.execute()
+            es_response = faceted_search.execute()
+            self.reflect_es_response_to_form_fields(es_response, form)
+            return es_response
 
         # Apply filters before executing the search based on the form data
         for key, value in form.cleaned_data.items():
@@ -91,24 +93,27 @@ class ESFacetedSearchView(View):
                         form_field.es_field,
                     )
             elif isinstance(form_field, FilterFormField):
-                es_query = form_field.get_es_filter_query(value)
-                # ToDo: Make it possible to apply this mf query
+                es_filter_query = form_field.get_es_filter_query(value)
+                if es_filter_query:
+                    faceted_search.add_filter_query(es_filter_query)
 
         # Add this point we have added all filters, so we can perform the query to ES.
-        es_reponse = faceted_search.execute()
-        return es_reponse
+        es_response = faceted_search.execute()
+        self.reflect_es_response_to_form_fields(es_response, form)
+        return es_response
+
+    def reflect_es_response_to_form_fields(self, es_response, form):
+        """
+        This method adds all available facet choices from the response to the facet form fields.
+        """
+        for field in form.fields.values():
+            if isinstance(field, FacetField) and field.es_field in es_response.facets:
+                field.process_facet_buckets(es_response.facets[field.es_field])
 
     def get_context_data(self, **kwargs):
         form = self.get_form()
-        es_reponse = self.get_es_response(form)
-
-        # Now that we have the ES response, all we have to do is update facet form fields with the
-        # available facet bucket items from the response.
-        for field in form.fields.values():
-            if isinstance(field, FacetField) and field.es_field in es_reponse.facets:
-                field.process_facet_buckets(es_reponse.facets[field.es_field])
-
-        return {"es_form": form, "es_response": es_reponse}
+        es_response = self.get_es_response(form)
+        return {"es_form": form, "es_response": es_response}
 
 
 class CatalogueRootView(ESFacetedSearchView):
