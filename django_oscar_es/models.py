@@ -1,9 +1,13 @@
+import logging
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from oscar.core.loading import get_class
 
 ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
+
+logger = logging.getLogger(__name__)
 
 
 class ProductElasticsearchSettings(models.Model):
@@ -109,10 +113,27 @@ class ProductFacet(models.Model):
         field_choices = []
         mapping = ProductDocument._doc_type.mapping.to_dict()["properties"]
         for field_name, field_info in mapping.items():
-            if field_info.get("type") == "text":
+            field_type = field_info.get("type")
+            if field_type == "text":
                 field_choices.append((f"{field_name}.keyword", f"{field_name}.keyword"))
-            else:
+            elif field_type not in ["object", "nested"]:
                 field_choices.append((field_name, field_name))
+            else:
+                logger.warning(
+                    "Skipping field '%s' as for now we don't support object or nested fields (with attributes as exception)",
+                    field_name,
+                )
+
+            # We know the structure of attributes, so we can add those to the field choices.
+            if field_name == "attributes":
+                for attribute_code in field_info["properties"].keys():
+                    field_choices.append(
+                        (
+                            f"attributes.{attribute_code}",
+                            f"attributes.{attribute_code}",
+                        )
+                    )
+
         return field_choices
 
 
