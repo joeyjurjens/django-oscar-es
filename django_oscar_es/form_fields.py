@@ -63,5 +63,5 @@ class PriceInputField(forms.MultiValueField, FilterFormField):
 
     def get_es_filter_query(self, cleaned_data):
         if cleaned_data:
-            return Q("range", price={"gte": cleaned_data[0], "lte": cleaned_data[1]})
+            return Q("range", price={"gt": cleaned_data[0], "lt": cleaned_data[1]})
         return None

@@ -1,11 +1,9 @@
 from django_es_facets.forms import FacetForm
-from django_es_facets.fields import TermsFacetField
 
 from .form_fields import (
     PriceInputField,
     DbFacetField,
     DbRangeFacetField,
-    TermsFacetField,
 )
 from .models import ProductFacet
 
