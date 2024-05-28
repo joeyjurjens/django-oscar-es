@@ -55,7 +55,7 @@
             </tbody>
         </table>
         
-        <button type="button" id="add_search_field" class="btn btn-primary">Add Search Field</button>
+        <button class="btn btn-primary">{% trans "Save" %}</button>
     </div>
 
     <div id="facets-table-container" class="mt-5">
@@ -110,7 +110,9 @@
                                                 </tr>
                                             {% endfor %}
                                             <tr>
-                                                <td><button type="button" id="add_range_option" class="btn btn-primary m-0">Add Range Option</button></td>
+                                                <td>
+                                                    <button class="btn btn-primary">{% trans "Save" %}</button>
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -122,9 +124,7 @@
             </tbody>
         </table>
     </div>
-    
-    <button type="button" id="add_facet" class="btn btn-primary">Add Facet</button>
-    <button type="submit" class="btn btn-success">Save</button>
-
+    <button type="submit" class="btn btn-primary">Save</button>
 </form>
+
 {% endblock %}

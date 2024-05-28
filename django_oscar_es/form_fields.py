@@ -13,25 +13,26 @@ from django_es_facets.fields import (
 
 class DbFacetField(TermsFacetField):
     def __init__(self, es_field, db_facet, **kwargs):
-        self.db_facet = db_facet
         super().__init__(es_field, **kwargs)
+        self.db_facet = db_facet
+        self.label = db_facet.label or db_facet.field
 
 
 class DbRangeFacetField(RangeFacetField):
     def __init__(self, es_field, db_facet, **kwargs):
-        self.db_facet = db_facet
-
         ranges = []
         for db_range in db_facet.range_options.all():
             ranges.append(
                 RangeOption(
-                    db_range.from_value or None,
-                    db_range.to_value or None,
+                    db_range.get_from_value(),
+                    db_range.get_to_value(),
                     db_range.label,
                 )
             )
-
         super().__init__(es_field, ranges, **kwargs)
+
+        self.db_facet = db_facet
+        self.label = db_facet.label or db_facet.field
 
 
 class PriceInputWidget(forms.MultiWidget):

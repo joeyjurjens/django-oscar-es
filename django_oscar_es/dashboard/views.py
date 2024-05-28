@@ -12,7 +12,7 @@ from .forms import (
 
 
 class ProductElasticsearchSettingsView(TemplateView):
-    template_name = "django_oscar_es/product_elasticsearch_settings.html"
+    template_name = "django_oscar_es/dashboard/product_elasticsearch_settings.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -48,7 +48,7 @@ class ProductElasticsearchSettingsView(TemplateView):
                 for form in facets_formset:
                     form.nested.save()
 
-            return redirect("product-elasticsearch-settings")
+            return redirect("dashboard-product-elasticsearch")
 
         context = self.get_context_data()
         context["search_fields_formset"] = search_fields_formset

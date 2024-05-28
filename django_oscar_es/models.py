@@ -1,4 +1,7 @@
 import logging
+import datetime
+
+from decimal import Decimal
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -143,14 +146,12 @@ class ProductFacetRangeOption(models.Model):
     RANGE_TYPE_DOUBLE = "double"
     RANGE_TYPE_DECIMAL = "decimal"
     RANGE_TYPE_DATE = "date"
-    RANGE_TYPE_DATETIME = "datetime"
     RANGE_TYPE_CHOICES = (
         (RANGE_TYPE_INTEGER, _("Integer")),
         (RANGE_TYPE_FLOAT, _("Float")),
         (RANGE_TYPE_DOUBLE, _("Double")),
         (RANGE_TYPE_DECIMAL, _("Decimal")),
         (RANGE_TYPE_DATE, _("Date")),
-        (RANGE_TYPE_DATETIME, _("Datetime")),
     )
 
     facet = models.ForeignKey(
@@ -180,3 +181,35 @@ class ProductFacetRangeOption(models.Model):
         blank=True,
         help_text=_("The 'to' value for this range option."),
     )
+
+    def get_from_value(self):
+        """
+        Returns the correct value based on the range_type
+        """
+        return self.value_to_python(self.from_value)
+
+    def get_to_value(self):
+        """
+        Returns the correct value based on the range_type
+        """
+        return self.value_to_python(self.to_value)
+
+    def value_to_python(self, value):
+        """
+        Converts the value to the correct type based on the range_type
+        """
+        if not value:
+            return None
+
+        if self.range_type == self.RANGE_TYPE_INTEGER:
+            return int(value)
+        elif self.range_type == self.RANGE_TYPE_FLOAT:
+            return float(value)
+        elif self.range_type == self.RANGE_TYPE_DOUBLE:
+            return float(value)
+        elif self.range_type == self.RANGE_TYPE_DECIMAL:
+            return Decimal(value)
+        elif self.range_type == self.RANGE_TYPE_DATE:
+            return datetime.strptime(value, "%Y-%m-%d")
+        else:
+            raise ValueError(f"Unknown range type: {self.range_type}")

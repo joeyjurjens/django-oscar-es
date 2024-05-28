@@ -26,7 +26,7 @@ ProductSearchFieldFormSet = inlineformset_factory(
     ProductElasticsearchSettings,
     ProductSearchField,
     form=ProductSearchFieldForm,
-    extra=1,
+    extra=3,
 )
 
 
@@ -79,7 +79,7 @@ ProductFacetFormSet = inlineformset_factory(
     ProductFacet,
     formset=ProductFacetInlineFormset,
     form=ProductFacetForm,
-    extra=1,
+    extra=3,
 )
 
 
@@ -90,5 +90,5 @@ class ProductFacetRangeOptionForm(forms.ModelForm):
 
 
 ProductFacetRangeOptionFormSet = inlineformset_factory(
-    ProductFacet, ProductFacetRangeOption, form=ProductFacetRangeOptionForm, extra=1
+    ProductFacet, ProductFacetRangeOption, form=ProductFacetRangeOptionForm, extra=3
 )
