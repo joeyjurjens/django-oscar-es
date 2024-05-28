@@ -49,7 +49,7 @@
                         <td>{{ form.id }} {{ form.field }}</td>
                         <td>{{ form.boost }}</td>
                         <td>{{ form.disabled }}</td>
-                        <td>{{ form.delete }}</td>
+                        <td>{{ form.DELETE }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -71,6 +71,7 @@
                     <th>Formatter</th>
                     <th>Enabled Categories</th>
                     <th>Disabled Categories</th>
+                    <th>Delete</th>
                 </tr>
             </thead>
             <tbody>
@@ -82,6 +83,7 @@
                         <td>{{ form.formatter }}</td>
                         <td>{{ form.enabled_categories }}</td>
                         <td>{{ form.disabled_categories }}</td>
+                        <td>{{ form.DELETE }}</td>
                     </tr>
                     {% if form.nested %}
                         <tr>
@@ -98,6 +100,7 @@
                                                 <th>Range Type</th>
                                                 <th>From Value</th>
                                                 <th>To Value</th>
+                                                <th>Delete</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -107,6 +110,7 @@
                                                     <td>{{ range_option_form.range_type }}</td>
                                                     <td>{{ range_option_form.from_value }}</td>
                                                     <td>{{ range_option_form.to_value }}</td>
+                                                    <td>{{ range_option_form.DELETE }}</td>
                                                 </tr>
                                             {% endfor %}
                                             <tr>
