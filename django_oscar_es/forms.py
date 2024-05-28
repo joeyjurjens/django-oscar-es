@@ -1,4 +1,4 @@
-from django_es_facets.forms import FacetForm
+from django_es_kit.forms import FacetForm
 
 from .form_fields import (
     PriceInputField,

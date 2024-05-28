@@ -2,7 +2,7 @@ import logging
 
 from django.shortcuts import render
 
-from django_es_facets.views import ESFacetedSearchView
+from django_es_kit.views import ESFacetedSearchView
 
 from .faceted_search import CatalogueRootFacetedSearch
 from .forms import ProductFacetForm

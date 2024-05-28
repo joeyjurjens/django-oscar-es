@@ -1,6 +1,8 @@
 from elasticsearch_dsl import Q
 
-from django_es_facets.faceted_search import DynamicFacetedSearch
+from .documents import ProductDocument
+
+from django_es_kit.faceted_search import DynamicFacetedSearch
 
 
 class CatalogueRootFacetedSearch(DynamicFacetedSearch):
@@ -10,6 +12,8 @@ class CatalogueRootFacetedSearch(DynamicFacetedSearch):
 
 
 class CatalogueCategoryFacetedSearch(CatalogueRootFacetedSearch):
+    doc_types = [ProductDocument]
+
     def __init__(self, category, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.category = category

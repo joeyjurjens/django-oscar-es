@@ -3,8 +3,8 @@ from elasticsearch_dsl import Q
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from django_es_facets.fields import (
-    FilterFormField,
+from django_es_kit.fields import (
+    FilterField,
     TermsFacetField,
     RangeFacetField,
     RangeOption,
@@ -49,7 +49,7 @@ class PriceInputWidget(forms.MultiWidget):
         return [None, None]
 
 
-class PriceInputField(forms.MultiValueField, FilterFormField):
+class PriceInputField(forms.MultiValueField, FilterField):
     widget = PriceInputWidget
 
     def __init__(self, *args, **kwargs):

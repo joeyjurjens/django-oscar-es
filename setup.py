@@ -11,6 +11,6 @@ setup(
     description="An elasticsearch integration for django-oscar",
     install_requires=[
         "django-oscar",
-        "django-elasticsearch-dsl",
+        "django-es-kit",
     ],
 )
