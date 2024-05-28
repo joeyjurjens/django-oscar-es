@@ -1,0 +1,130 @@
+{% extends "oscar/dashboard/layout.html" %}
+
+{% load i18n %}
+
+{% block headertext %}
+    Product Elasticsearch Settings
+{% endblock %}
+
+{% block extrascripts %}
+    {{ block.super }}
+    <script>
+        $(document).ready(function() {
+            $('select[name^="facets-"][name$="-facet_type"]').change(function() {
+                console.log("$(this): ", $(this));
+                const rangeOptionsTableContainer = $(this).closest('tr').next().find('#range-options-table-container');
+                console.log(rangeOptionsTableContainer);
+                if ($(this).val() === 'range') {
+                    rangeOptionsTableContainer.show();
+                } else {
+                    rangeOptionsTableContainer.hide();
+                }
+            });
+            
+            $('select[name^="facets-"][name$="-facet_type"]').trigger('change');
+        });
+    </script>
+{% endblock %}
+
+{% block dashboard_content %}
+<form method="post">
+    {% csrf_token %}
+    
+    <div id="search-fields-table-container">
+        <h2><strong>Search Fields</strong></h2>
+        {{ search_fields_formset.management_form }}
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Boost</th>
+                    <th>Disabled</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for form in search_fields_formset %}
+                    <tr>
+                        <td>{{ form.id }} {{ form.field }}</td>
+                        <td>{{ form.boost }}</td>
+                        <td>{{ form.disabled }}</td>
+                        <td>{{ form.delete }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <button type="button" id="add_search_field" class="btn btn-primary">Add Search Field</button>
+    </div>
+
+    <div id="facets-table-container" class="mt-5">
+        <h2><strong>Facets</strong></h2>
+        {{ facets_formset.management_form }}
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Label</th>
+                    <th>Facet Type</th>
+                    <th>Formatter</th>
+                    <th>Enabled Categories</th>
+                    <th>Disabled Categories</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for form in facets_formset %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.field }}</td>
+                        <td>{{ form.label }}</td>
+                        <td>{{ form.facet_type }}</td>
+                        <td>{{ form.formatter }}</td>
+                        <td>{{ form.enabled_categories }}</td>
+                        <td>{{ form.disabled_categories }}</td>
+                    </tr>
+                    {% if form.nested %}
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td colspan="6">
+                                {{ form.nested.management_form }}
+                                <div id="range-options-table-container">
+                                    <h3><strong>Range Options</strong></h3>
+                                    <table id="range-options-table" class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Label</th>
+                                                <th>Range Type</th>
+                                                <th>From Value</th>
+                                                <th>To Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for range_option_form in form.nested.forms %}
+                                                <tr>
+                                                    <td>{{ range_option_form.id }} {{ range_option_form.label }}</td>
+                                                    <td>{{ range_option_form.range_type }}</td>
+                                                    <td>{{ range_option_form.from_value }}</td>
+                                                    <td>{{ range_option_form.to_value }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                            <tr>
+                                                <td><button type="button" id="add_range_option" class="btn btn-primary m-0">Add Range Option</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <button type="button" id="add_facet" class="btn btn-primary">Add Facet</button>
+    <button type="submit" class="btn btn-success">Save</button>
+
+</form>
+{% endblock %}
