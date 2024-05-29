@@ -6,9 +6,9 @@ from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from oscar.core.loading import get_class
+from .settings import get_product_document
 
-ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
+ProductDocument = get_product_document()
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,11 @@ class ProductElasticsearchSettings(models.Model):
     @classmethod
     def load(cls):
         settings, _ = cls.objects.get_or_create()
-        return settings
+        return (
+            cls.objects.select_related()
+            .prefetch_related("facets", "facets__range_options")
+            .get(pk=settings.pk)
+        )
 
 
 class ProductSearchField(models.Model):
@@ -45,11 +49,10 @@ class ProductSearchField(models.Model):
         """
         Returns all text and keyword fields from the ProductDocument mapping.
         """
+        properties = ProductDocument._doc_type.mapping.to_dict()["properties"].items()
         return [
             (field, field)
-            for field, field_info in ProductDocument._doc_type.mapping.to_dict()[
-                "properties"
-            ].items()
+            for field, field_info in properties
             if field_info["type"] in ["text", "keyword"]
         ]
 
@@ -129,13 +132,13 @@ class ProductFacet(models.Model):
 
             # We know the structure of attributes, so we can add those to the field choices.
             if field_name == "attributes":
-                for attribute_code in field_info["properties"].keys():
-                    field_choices.append(
-                        (
-                            f"attributes.{attribute_code}",
-                            f"attributes.{attribute_code}",
-                        )
-                    )
+                for attribute_code, attribute_info in field_info["properties"].items():
+                    if attribute_info["type"] == "text":
+                        facet_field = f"attributes.{attribute_code}.keyword"
+                    else:
+                        facet_field = f"attributes.{attribute_code}"
+
+                    field_choices.append((facet_field, facet_field))
 
         return field_choices
 

@@ -24,18 +24,9 @@ class ProductAttributesField(fields.ObjectField):
                     properties[attribute_code] = {
                         "type": fields.Keyword().name,
                     }
-
-                # We're done here, continue to the next attribute.
-                continue
-
-            properties[attribute_code] = {
-                "type": es_type.name,
-            }
-
-            # If the attribute is of type text, also add a keyword field for aggregation (because that's not possible on text).
-            if properties[attribute_code]["type"] == fields.Text().name:
-                properties[attribute_code]["fields"] = {
-                    "keyword": fields.KeywordField()
+            else:
+                properties[attribute_code] = {
+                    "type": es_type.name,
                 }
 
         return properties

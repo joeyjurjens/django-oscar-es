@@ -6,11 +6,35 @@ from oscar.core.loading import get_model, get_class
 from .es_fields import ProductAttributesField
 
 Product = get_model("catalogue", "Product")
-ProductAttribute = get_model("catalogue", "ProductAttribute")
 Selector = get_class("partner.strategy", "Selector")
 
 
-class ProductDocument(Document):
+class BaseProductDocument(Document):
+    attributes = ProductAttributesField()
+
+    def prepare_attributes(self, instance):
+        result = {}
+        attribute_values = instance.attribute_values.all()
+        for attribute_value in attribute_values:
+            result[attribute_value.attribute.code] = (
+                self.__attribute_value_to_representable_value(attribute_value)
+            )
+        return result
+
+    def __attribute_value_to_representable_value(self, attribute_value):
+        attribute = attribute_value.attribute
+        if attribute.type == attribute.OPTION:
+            return attribute_value.value.option
+        elif attribute.type == attribute.MULTI_OPTION:
+            return [option for option in attribute_value.value.options]
+        elif attribute.type == attribute.FILE:
+            return attribute_value.value.url
+        elif attribute.type == attribute.IMAGE:
+            return attribute_value.value.url
+        return attribute_value.value
+
+
+class ProductDocument(BaseProductDocument):
     class Index:
         name = "products"
         settings = {
@@ -22,7 +46,6 @@ class ProductDocument(Document):
         model = Product
 
     def get_queryset(self):
-        # Improve performance by selecting related models in one sql query
         return (
             super()
             .get_queryset()
@@ -30,9 +53,7 @@ class ProductDocument(Document):
             .prefetch_related("attribute_values", "attribute_values__attribute")
         )
 
-    _all_text = fields.TextField()
-
-    title = fields.TextField(attr="title", fields={"raw": fields.KeywordField()})
+    title = fields.TextField(attr="title")
     description = fields.TextField(attr="description")
     is_public = fields.BooleanField(attr="is_public")
     upc = fields.KeywordField(attr="upc")
@@ -62,6 +83,13 @@ class ProductDocument(Document):
             return instance.parent.id
         return None
 
+    parent_upc = fields.KeywordField()
+
+    def prepare_parent_upc(self, instance):
+        if instance.parent:
+            return instance.parent.upc
+        return None
+
     price = fields.DoubleField()
 
     def prepare_price(self, instance):
@@ -82,37 +110,9 @@ class ProductDocument(Document):
         purchase_info = self.__purchase_info(instance)
         return purchase_info.availability.is_available_to_buy
 
-    attributes = ProductAttributesField()
-
-    def prepare_attributes(self, instance):
-        result = {}
-
-        attribute_values = instance.attribute_values.all()
-        for attribute_value in attribute_values:
-            result[attribute_value.attribute.code] = (
-                self.__attribute_value_to_representable_value(attribute_value)
-            )
-
-        return result
-
     def __purchase_info(self, instance):
         strategy = Selector().strategy()
-
         if instance.is_parent:
             return strategy.fetch_for_parent(instance)
         else:
             return strategy.fetch_for_product(instance)
-
-    def __attribute_value_to_representable_value(self, attribute_value):
-        attribute = attribute_value.attribute
-
-        if attribute.type == attribute.OPTION:
-            return attribute_value.value.option
-        elif attribute.type == attribute.MULTI_OPTION:
-            return [option for option in attribute_value.value.options]
-        elif attribute.type == attribute.FILE:
-            return attribute_value.value.url
-        elif attribute.type == attribute.IMAGE:
-            return attribute_value.value.url
-
-        return attribute_value.value

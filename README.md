@@ -18,4 +18,4 @@
 pip install django-oscar-es
 ```
 
-As it leverages django-elasticsearch-dsl under the hood, you must also [configure this](https://django-elasticsearch-dsl.readthedocs.io/en/latest/quickstart.html#install-and-configure) for it to be able to connect to your elasticsearch instance.
+As it leverages `django-elasticsearch-dsl` under the hood, you must also [configure this](https://django-elasticsearch-dsl.readthedocs.io/en/latest/quickstart.html#install-and-configure) for it to be able to connect to your elasticsearch instance.

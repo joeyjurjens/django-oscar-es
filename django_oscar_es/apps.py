@@ -1,7 +1,6 @@
 from django.apps import apps
 from django.urls import path
 
-from oscar.core.application import OscarConfig
 from oscar.core.application import OscarDashboardConfig
 from oscar.core.loading import get_class
 
@@ -21,12 +20,11 @@ class DjangoOscarEsConfig(OscarDashboardConfig):
             "django_oscar_es.dashboard.views", "ProductElasticsearchSettingsView"
         )
 
-        self.register_es_documents()
-        self.patch_dashboard_config_urls()
+        from .settings import get_product_document
 
-    def register_es_documents(self):
-        ProductDocument = get_class("django_oscar_es.documents", "ProductDocument")
-        registry.register_document(ProductDocument)
+        registry.register_document(get_product_document())
+
+        self.patch_dashboard_config_urls()
 
     def get_urls(self):
         url_patterns = [
