@@ -21,4 +21,4 @@ def get_product_document():
             "OSCAR_ELASTICSEARCH_PRODUCT_DOCUMENT must be a subclass of BaseProductDocument"
         )
 
-    return document_class()
+    return document_class

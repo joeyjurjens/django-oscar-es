@@ -1,0 +1,69 @@
+{% extends "oscar/catalogue/browse.html" %}
+
+{% load basket_tags %}
+{% load category_tags %}
+{% load product_tags %}
+{% load i18n %}
+
+{% block column_left %}
+    {% block categories %}
+        {% category_tree as tree_categories %}
+        {% if tree_categories %}
+            <h4>{% trans "Show results for" %}</h4>
+            <div class="side_categories card card-body bg-light">
+                <ul class="nav nav-list flex-column">
+                    {% for tree_category in tree_categories %}
+                        <li class="mt-2">
+                            <a href="{{ tree_category.url }}">
+                                {% if tree_category.pk == category.pk %}
+                                    <strong>{{ tree_category.name }}</strong>
+                                {% else %}
+                                    {{ tree_category.name }}
+                                {% endif %}
+                            </a>
+
+                            {% if tree_category.has_children %}<ul>{% else %}</li>{% endif %}
+                            {% for n in tree_category.num_to_close %}
+                                </ul></li>
+                            {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    {% endblock %}
+    {% block facets %}
+        <h4>{% trans "Refine by" %}</h4>
+        <div class="side_categories card card-body bg-light">
+            <form id="facet-filer-form" method="get" action="">
+                {{ es_form.as_p }}
+            </form>
+        </div>
+    {% endblock %}
+{% endblock %}
+
+{% block products %}
+    {% for product in products %}
+        <li class="col-sm-6 col-md-4 col-lg-3">{% render_product product %}</li>
+    {% endfor %}
+{% endblock %}
+
+{% block extrascripts %}
+    {{ block.super }}
+    <script>
+        // ToDo: Once the backend implementation is done. We need to update this script to make an AJAX request to the backend.
+        // and update the results and facets without needing to do a page reload.
+        document.addEventListener("DOMContentLoaded", function() {
+            var form = document.getElementById("facet-filer-form");
+            form.addEventListener("change", function(event) {
+                var target = event.target;
+                if (target.type === "checkbox" || target.type === "radio") {
+                    form.submit();
+                    var inputs = form.querySelectorAll("input, select, textarea");
+                    inputs.forEach(function(input) {
+                        input.disabled = true;
+                    });
+                }
+            });
+        });
+    </script>
+{% endblock %}

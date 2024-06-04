@@ -6,7 +6,7 @@ from ..models import ProductElasticsearchSettings
 
 from .forms import (
     ProductSearchFieldFormSet,
-    ProductFacetFormSet,
+    ProductFacetedSearchFormSet,
     ProductFacetRangeOptionFormSet,
 )
 
@@ -22,7 +22,7 @@ class ProductElasticsearchSettingsView(TemplateView):
             ctx["search_fields_formset"] = ProductSearchFieldFormSet(instance=settings)
 
         if "facets_formset" not in ctx:
-            ctx["facets_formset"] = ProductFacetFormSet(instance=settings)
+            ctx["facets_formset"] = ProductFacetedSearchFormSet(instance=settings)
 
         return ctx
 
@@ -32,7 +32,7 @@ class ProductElasticsearchSettingsView(TemplateView):
         search_fields_formset = ProductSearchFieldFormSet(
             request.POST, instance=settings
         )
-        facets_formset = ProductFacetFormSet(request.POST, instance=settings)
+        facets_formset = ProductFacetedSearchFormSet(request.POST, instance=settings)
         for form in facets_formset:
             form.range_option_formset = ProductFacetRangeOptionFormSet(
                 request.POST, instance=form.instance

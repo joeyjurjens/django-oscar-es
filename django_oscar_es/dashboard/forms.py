@@ -57,7 +57,7 @@ class ProductFacetInlineFormset(BaseInlineFormSet):
         return result
 
 
-class ProductFacetForm(forms.ModelForm):
+class ProductFacetedSearchForm(forms.ModelForm):
     class Meta:
         model = ProductFacet
         fields = [
@@ -74,11 +74,11 @@ class ProductFacetForm(forms.ModelForm):
         self.fields["field"].choices = [("", "")] + ProductFacet.get_field_choices()
 
 
-ProductFacetFormSet = inlineformset_factory(
+ProductFacetedSearchFormSet = inlineformset_factory(
     ProductElasticsearchSettings,
     ProductFacet,
     formset=ProductFacetInlineFormset,
-    form=ProductFacetForm,
+    form=ProductFacetedSearchForm,
     extra=3,
 )
 

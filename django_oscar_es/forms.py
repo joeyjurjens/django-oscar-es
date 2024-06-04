@@ -1,4 +1,4 @@
-from django_es_kit.forms import FacetForm
+from django_es_kit.forms import FacetedSearchForm
 
 from oscar.core.loading import get_class
 
@@ -14,7 +14,7 @@ get_product_elasticsearch_settings = get_class(
 )
 
 
-class BaseProductFacetForm(FacetForm):
+class BaseProductFacetedSearchForm(FacetedSearchForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -24,16 +24,18 @@ class BaseProductFacetForm(FacetForm):
             if db_facet.facet_type == ProductFacet.FACET_TYPE_TERM:
                 self.fields[db_facet.field] = DbFacetField(
                     es_field=db_facet.field,
+                    field_type=str,
                     db_facet=db_facet,
                 )
             elif db_facet.facet_type == ProductFacet.FACET_TYPE_RANGE:
                 self.fields[db_facet.field] = DbRangeFacetField(
                     es_field=db_facet.field,
+                    field_type=str,
                     db_facet=db_facet,
                 )
             else:
                 raise ValueError(f"Unknown facet type '{db_facet.facet_type}'")
 
 
-class ProductFacetForm(BaseProductFacetForm):
+class ProductFacetedSearchForm(FacetedSearchForm):
     price = PriceInputField(required=False)
