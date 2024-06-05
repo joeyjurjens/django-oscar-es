@@ -36,6 +36,7 @@
         <div class="side_categories card card-body bg-light">
             <form id="facet-filer-form" method="get" action="">
                 {{ es_form.as_p }}
+                <button>submit</button>
             </form>
         </div>
     {% endblock %}
@@ -56,7 +57,7 @@
             var form = document.getElementById("facet-filer-form");
             form.addEventListener("change", function(event) {
                 var target = event.target;
-                if (target.type === "checkbox" || target.type === "radio") {
+                if (target.type === "checkbox" || target.type === "radio" || target.tagName === "SELECT") {
                     form.submit();
                     var inputs = form.querySelectorAll("input, select, textarea");
                     inputs.forEach(function(input) {

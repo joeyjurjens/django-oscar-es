@@ -4,9 +4,11 @@ from django_elasticsearch_dsl.documents import Document
 from oscar.core.loading import get_model, get_class
 
 from .es_fields import ProductAttributesField
+from .settings import get_product_index
 
 Product = get_model("catalogue", "Product")
 Selector = get_class("partner.strategy", "Selector")
+product_index = get_product_index()
 
 
 class BaseProductDocument(Document):
@@ -34,14 +36,8 @@ class BaseProductDocument(Document):
         return attribute_value.value
 
 
+@product_index.document
 class ProductDocument(BaseProductDocument):
-    class Index:
-        name = "products"
-        settings = {
-            "number_of_shards": 1,
-            "max_ngram_diff": 15,
-        }
-
     class Django:
         model = Product
 
@@ -53,16 +49,15 @@ class ProductDocument(BaseProductDocument):
             .prefetch_related("attribute_values", "attribute_values__attribute")
         )
 
-    title = fields.TextField(attr="title")
-    description = fields.TextField(attr="description")
-    is_public = fields.BooleanField(attr="is_public")
+    title = fields.TextField(
+        attr="title",
+        analyzer="title_analyzer",
+        fields={"keyword": fields.KeywordField(normalizer="lowercase")},
+    )
+    description = fields.TextField(attr="description", analyzer="description_analyzer")
     upc = fields.KeywordField(attr="upc")
-    slug = fields.TextField(attr="slug")
     rating = fields.FloatField(attr="rating")
-    date_created = fields.DateField(attr="date_created")
-    date_updated = fields.DateField(attr="date_updated")
-    is_discountable = fields.BooleanField(attr="is_discountable")
-
+    is_public = fields.BooleanField(attr="is_public")
     categories = fields.NestedField(
         properties={
             "id": fields.IntegerField(),
@@ -70,6 +65,23 @@ class ProductDocument(BaseProductDocument):
             "description": fields.TextField(),
         }
     )
+
+    date_created = fields.DateField(attr="date_created")
+    date_updated = fields.DateField(attr="date_updated")
+
+    structure = fields.KeywordField(attr="structure")
+    is_discountable = fields.BooleanField(attr="is_discountable")
+    slug = fields.TextField(attr="slug")
+
+    product_class = fields.NestedField()
+
+    def prepare_product_class(self, instance):
+        product_class = instance.get_product_class()
+        return {
+            "id": product_class.id,
+            "name": product_class.name,
+            "requires_shipping": product_class.requires_shipping,
+        }
 
     absolute_url = fields.TextField()
 

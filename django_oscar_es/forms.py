@@ -1,4 +1,8 @@
+from django import forms
+from django.utils.translation import gettext_lazy as _
+
 from django_es_kit.forms import FacetedSearchForm
+from django_es_kit.fields import SortField
 
 from oscar.core.loading import get_class
 
@@ -38,4 +42,24 @@ class BaseProductFacetedSearchForm(FacetedSearchForm):
 
 
 class ProductFacetedSearchForm(FacetedSearchForm):
+    RELEVANCY = "relevancy"
+    TOP_RATED = "rating"
+    NEWEST = "newest"
+    PRICE_HIGH_TO_LOW = "price-desc"
+    PRICE_LOW_TO_HIGH = "price-asc"
+    TITLE_A_TO_Z = "title-asc"
+    TITLE_Z_TO_A = "title-desc"
+
+    SORT_BY_CHOICES = [
+        (RELEVANCY, _("Relevancy"), "_score"),
+        (TOP_RATED, _("Customer rating"), "-rating"),
+        (NEWEST, _("Newest"), "-date_created"),
+        (PRICE_HIGH_TO_LOW, _("Price high to low"), "-price"),
+        (PRICE_LOW_TO_HIGH, _("Price low to high"), "price"),
+        (TITLE_A_TO_Z, _("Title A to Z"), "title.keyword"),
+        (TITLE_Z_TO_A, _("Title Z to A"), "-title.keyword"),
+    ]
+
+    search_query = forms.CharField(required=False, label=_("Search"))
+    sort_option = SortField(SORT_BY_CHOICES, required=False)
     price = PriceInputField(required=False)

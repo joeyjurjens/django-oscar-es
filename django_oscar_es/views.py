@@ -28,7 +28,7 @@ class BaseCatalogueView(ListView, ESFacetedSearchView):
     context_object_name = "products"
 
     def get_search_query(self):
-        return self.request.GET.get("q", None)
+        return self.request.GET.get("search_query", None)
 
     def get_faceted_search(self):
         faceted_search = super().get_faceted_search()
