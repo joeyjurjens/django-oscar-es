@@ -61,5 +61,5 @@ class ProductFacetedSearchForm(FacetedSearchForm):
     ]
 
     search_query = forms.CharField(required=False, label=_("Search"))
-    sort_option = SortField(SORT_BY_CHOICES, required=False)
+    sort_by = SortField(SORT_BY_CHOICES, required=False)
     price = PriceInputField(required=False)

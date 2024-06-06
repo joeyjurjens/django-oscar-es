@@ -6,7 +6,7 @@ from django.conf import settings
 from django.views.generic import ListView
 from django.shortcuts import get_object_or_404
 
-from django_es_kit.views import ESFacetedSearchView
+from django_es_kit.views import ESFacetedSearchListView
 
 from oscar.core.loading import get_class, get_model
 
@@ -21,7 +21,7 @@ Category = get_model("catalogue", "Category")
 logger = logging.getLogger(__name__)
 
 
-class BaseCatalogueView(ListView, ESFacetedSearchView):
+class BaseCatalogueView(ESFacetedSearchListView):
     form_class = ProductFacetedSearchForm
     faceted_search_class = CatalogueFacetedSearch
     paginate_by = settings.OSCAR_PRODUCTS_PER_PAGE
@@ -29,15 +29,6 @@ class BaseCatalogueView(ListView, ESFacetedSearchView):
 
     def get_search_query(self):
         return self.request.GET.get("search_query", None)
-
-    def get_faceted_search(self):
-        faceted_search = super().get_faceted_search()
-        faceted_search.set_pagination(page=1, page_size=self.paginate_by)
-        return faceted_search
-
-    def get_queryset(self):
-        es_response = self.get_es_response()
-        return es_response._search.to_queryset()
 
 
 class CatalogueView(BaseCatalogueView):
