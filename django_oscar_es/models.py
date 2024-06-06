@@ -84,6 +84,10 @@ class ProductFacet(models.Model):
         choices=FACET_TYPE_CHOICES,
         default=FACET_TYPE_TERM,
     )
+    size = models.IntegerField(
+        default=10,
+        help_text=_("The number of facet values to return."),
+    )
     formatter = models.CharField(
         max_length=255,
         choices=[("", "")],
@@ -120,8 +124,20 @@ class ProductFacet(models.Model):
         mapping = ProductDocument._doc_type.mapping.to_dict()["properties"]
         for field_name, field_info in mapping.items():
             field_type = field_info.get("type")
+            # Text fields can't be used for faceting, search for a keyword field instead.
             if field_type == "text":
-                field_choices.append((f"{field_name}.keyword", f"{field_name}.keyword"))
+                if "fields" in field_info:
+                    for sub_field_name, sub_field_info in field_info.get(
+                        "fields", []
+                    ).items():
+                        if sub_field_info["type"] == "keyword":
+                            field_choices.append(
+                                (
+                                    f"{field_name}.{sub_field_name}",
+                                    f"{field_name}.{sub_field_name}",
+                                )
+                            )
+                            break
             elif field_type not in ["object", "nested"]:
                 field_choices.append((field_name, field_name))
             else:

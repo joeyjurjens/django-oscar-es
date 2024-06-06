@@ -64,6 +64,7 @@ class ProductFacetedSearchForm(forms.ModelForm):
             "field",
             "label",
             "facet_type",
+            "size",
             "formatter",
             "enabled_categories",
             "disabled_categories",

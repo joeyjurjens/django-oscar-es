@@ -41,7 +41,7 @@ class BaseProductFacetedSearchForm(FacetedSearchForm):
                 raise ValueError(f"Unknown facet type '{db_facet.facet_type}'")
 
 
-class ProductFacetedSearchForm(FacetedSearchForm):
+class ProductFacetedSearchForm(BaseProductFacetedSearchForm):
     RELEVANCY = "relevancy"
     TOP_RATED = "rating"
     NEWEST = "newest"
