@@ -11,9 +11,7 @@
     <script>
         $(document).ready(function() {
             $('select[name^="facets-"][name$="-facet_type"]').change(function() {
-                console.log("$(this): ", $(this));
                 const rangeOptionsTableContainer = $(this).closest('tr').next().find('#range-options-table-container');
-                console.log(rangeOptionsTableContainer);
                 if ($(this).val() === 'range') {
                     rangeOptionsTableContainer.show();
                 } else {
