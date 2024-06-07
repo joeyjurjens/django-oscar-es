@@ -1,4 +1,4 @@
-from .formatters.registry import register_formatter
+from .formatter_registry import register_formatter
 
 
 @register_formatter("uppercase_formatter")

@@ -7,7 +7,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .settings import get_product_document
-from .formatters.registry import formatter_registry
+from .formatter_registry import formatter_registry
 
 ProductDocument = get_product_document()
 
