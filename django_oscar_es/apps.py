@@ -22,6 +22,9 @@ class DjangoOscarEsConfig(OscarDashboardConfig):
 
         from .settings import get_product_document
 
+        # pylint: disable=unused-import
+        from . import signal_receivers
+
         registry.register_document(get_product_document())
 
         self.patch_dashboard_config_urls()
