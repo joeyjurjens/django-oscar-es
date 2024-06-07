@@ -60,6 +60,6 @@ class ProductFacetedSearchForm(BaseProductFacetedSearchForm):
         (TITLE_Z_TO_A, _("Title Z to A"), "-title.keyword"),
     ]
 
-    search_query = forms.CharField(required=False, label=_("Search"))
+    q = forms.CharField(required=False, label=_("Search"))
     sort_by = SortField(SORT_BY_CHOICES, required=False)
     price = PriceInputField(required=False)

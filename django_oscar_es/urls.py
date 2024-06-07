@@ -4,6 +4,7 @@ from oscar.core.loading import get_class
 
 CatalogueView = get_class("django_oscar_es.views", "CatalogueView")
 ProductCategoryView = get_class("django_oscar_es.views", "ProductCategoryView")
+SearchView = get_class("django_oscar_es.views", "SearchView")
 
 
 app_name = "django_oscar_es"
@@ -16,4 +17,5 @@ urlpatterns = [
         ProductCategoryView.as_view(),
         name="category",
     ),
+    path("search/", SearchView.as_view(), name="search"),
 ]

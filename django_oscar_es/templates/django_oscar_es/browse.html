@@ -32,13 +32,7 @@
         {% endif %}
     {% endblock %}
     {% block facets %}
-        <h4>{% trans "Refine by" %}</h4>
-        <div class="side_categories card card-body bg-light">
-            <form id="facet-filer-form" method="get" action="">
-                {{ es_form.as_p }}
-                <button>submit</button>
-            </form>
-        </div>
+        {% include "django_oscar_es/partials/facets.html" %}
     {% endblock %}
 {% endblock %}
 

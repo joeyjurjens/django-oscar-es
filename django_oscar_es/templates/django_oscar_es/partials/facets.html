@@ -1,0 +1,15 @@
+{% load i18n %}
+
+<h4>{% trans "Refine by" %}</h4>
+<div class="side_categories card card-body bg-light">
+    <form id="facet-filer-form" method="get" action="">
+        {% for facet_field in es_form.get_facet_fields %}
+            {% if facet_field.choices %}
+                <label for="{{ facet_field.name }}">
+                    <strong class="mb-5">{{ facet_field.label }}</strong>
+                </label>
+                {{ facet_field }}
+            {% endif %}
+        {% endfor %}
+    </form>
+</div>
