@@ -73,6 +73,7 @@ class ProductFacetedSearchForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["field"].choices = [("", "")] + ProductFacet.get_field_choices()
+        self.fields["formatter"].choices = ProductFacet.get_formatter_choices()
 
 
 ProductFacetedSearchFormSet = inlineformset_factory(

@@ -7,6 +7,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .settings import get_product_document
+from .formatters.registry import formatter_registry
 
 ProductDocument = get_product_document()
 
@@ -114,9 +115,23 @@ class ProductFacet(models.Model):
         ),
     )
 
+    def get_formatter(self):
+        if self.formatter:
+            formatter_func = formatter_registry.get_formatter(self.formatter)
+            if formatter_func:
+                return formatter_func
+            else:
+                logger.warning(
+                    "Formatter %s is not registered in the formatter registry. This could happen if this formatter was chosen for a facet but removed later.",
+                    self.formatter,
+                )
+
+        return None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.get_field("field").choices = self.get_field_choices()
+        self._meta.get_field("formatter").choices = self.get_formatter_choices()
 
     @classmethod
     def get_field_choices(cls):
@@ -157,6 +172,12 @@ class ProductFacet(models.Model):
                     field_choices.append((facet_field, facet_field))
 
         return field_choices
+
+    @classmethod
+    def get_formatter_choices(cls):
+        return [("", "")] + [
+            (name, name) for name, _ in formatter_registry.get_formatters()
+        ]
 
 
 class ProductFacetRangeOption(models.Model):

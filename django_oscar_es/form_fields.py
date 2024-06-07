@@ -17,6 +17,7 @@ class DbFacetField(TermsFacetField):
         self.db_facet = db_facet
         self.label = db_facet.label or db_facet.field
         self.size = db_facet.size
+        self.formatter = db_facet.get_formatter()
 
 
 class DbRangeFacetField(RangeFacetField):
@@ -35,6 +36,7 @@ class DbRangeFacetField(RangeFacetField):
         self.db_facet = db_facet
         self.label = db_facet.label or db_facet.field
         self.size = db_facet.size
+        self.formatter = db_facet.get_formatter()
 
 
 class PriceInputWidget(forms.MultiWidget):
