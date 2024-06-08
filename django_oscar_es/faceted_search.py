@@ -20,8 +20,9 @@ class CatalogueFacetedSearch(DynamicFacetedSearch):
 
     def __init__(self, facets, query=None, filters={}, sort=()):
         super().__init__(facets, query, filters, sort)
+        self.load_search_fields()
 
-        # Add configured search fields
+    def load_search_fields(self):
         product_es_settings = get_product_elasticsearch_settings()
         search_fields = [
             f"{search_field.field}^{search_field.boost}"

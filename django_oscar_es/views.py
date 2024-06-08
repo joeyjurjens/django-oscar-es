@@ -52,14 +52,20 @@ class ProductCategoryView(BaseCatalogueView):
 
     def get_faceted_search(self):
         faceted_search = super().get_faceted_search()
+        category_ids = (
+            self.get_category().get_descendants_and_self().values_list("pk", flat=True)
+        )
         faceted_search.add_filter_query(
             Q(
                 "nested",
                 path="categories",
-                query=Q("term", **{"categories.id": self.get_category().pk}),
+                query=Q("terms", **{"categories.id": list(category_ids)}),
             )
         )
         return faceted_search
+
+    def get_form_kwargs(self):
+        return {"category": self.get_category()}
 
     def get_category(self):
         if not self.category:

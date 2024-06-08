@@ -6,9 +6,12 @@ from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from oscar.core.loading import get_model
+
 from .settings import get_product_document
 from .formatter_registry import formatter_registry
 
+Category = get_model("catalogue", "Category")
 ProductDocument = get_product_document()
 
 logger = logging.getLogger(__name__)
@@ -102,6 +105,7 @@ class ProductFacet(models.Model):
         "catalogue.Category",
         blank=True,
         related_name="enabled_facets",
+        through="ProductFacetEnabledCategory",
         help_text=_(
             "If this facet is for a specific set of categories, you can choose them here. If you leave this (and disabled categories) empty, the facet will be enabled for all categories."
         ),
@@ -110,6 +114,7 @@ class ProductFacet(models.Model):
         "catalogue.Category",
         blank=True,
         related_name="disabled_facets",
+        through="ProductFacetDisabledCategory",
         help_text=_(
             "If this facet should be hidden for a specific set of categories, you can choose them here. If you leave this (and enabled categories) empty, the facet will be enabled for all categories."
         ),
@@ -178,6 +183,57 @@ class ProductFacet(models.Model):
         return [("", "")] + [
             (name, name) for name, _ in formatter_registry.get_formatters()
         ]
+
+    @classmethod
+    def get_facets_for_category(cls, category):
+        enabled_categories_prefetch = models.Prefetch(
+            "enabled_categories", queryset=Category.objects.only("id")
+        )
+
+        if category is None:
+            return cls.objects.filter(enabled_categories__isnull=True).prefetch_related(
+                enabled_categories_prefetch
+            )
+
+        disabled_categories_prefetch = models.Prefetch(
+            "disabled_categories", queryset=Category.objects.only("id")
+        )
+        return (
+            cls.objects.filter(
+                models.Q(enabled_categories=category)
+                | (
+                    models.Q(enabled_categories__isnull=True)
+                    & models.Q(disabled_categories__isnull=True)
+                )
+                | ~models.Q(disabled_categories=category)
+            )
+            .distinct()
+            .prefetch_related(enabled_categories_prefetch, disabled_categories_prefetch)
+        )
+
+
+class ProductFacetEnabledCategory(models.Model):
+    product_facet = models.ForeignKey(ProductFacet, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["product_facet", "category"]),
+            models.Index(fields=["category"]),
+        ]
+        unique_together = ("product_facet", "category")
+
+
+class ProductFacetDisabledCategory(models.Model):
+    product_facet = models.ForeignKey(ProductFacet, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["product_facet", "category"]),
+            models.Index(fields=["category"]),
+        ]
+        unique_together = ("product_facet", "category")
 
 
 class ProductFacetRangeOption(models.Model):

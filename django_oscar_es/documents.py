@@ -45,7 +45,7 @@ class ProductDocument(BaseProductDocument):
         return (
             super()
             .get_queryset()
-            .select_related("parent")
+            .select_related("parent", "product_class")
             .prefetch_related("attribute_values", "attribute_values__attribute")
         )
 
@@ -65,6 +65,13 @@ class ProductDocument(BaseProductDocument):
             "description": fields.TextField(),
         }
     )
+    product_class = fields.NestedField(
+        properties={
+            "id": fields.IntegerField(),
+            "name": fields.KeywordField(),
+            "requires_shipping": fields.BooleanField(),
+        }
+    )
 
     date_created = fields.DateField(attr="date_created")
     date_updated = fields.DateField(attr="date_updated")
@@ -72,16 +79,6 @@ class ProductDocument(BaseProductDocument):
     structure = fields.KeywordField(attr="structure")
     is_discountable = fields.BooleanField(attr="is_discountable")
     slug = fields.TextField(attr="slug")
-
-    product_class = fields.NestedField()
-
-    def prepare_product_class(self, instance):
-        product_class = instance.get_product_class()
-        return {
-            "id": product_class.id,
-            "name": product_class.name,
-            "requires_shipping": product_class.requires_shipping,
-        }
 
     absolute_url = fields.TextField()
 

@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_es_kit.forms import FacetedSearchForm
 from django_es_kit.fields import SortField
 
-from oscar.core.loading import get_class
+from oscar.core.loading import get_class, get_model
 
 from .form_fields import (
     PriceInputField,
@@ -13,6 +13,7 @@ from .form_fields import (
 )
 from .models import ProductFacet
 
+Category = get_model("catalogue", "Category")
 get_product_elasticsearch_settings = get_class(
     "django_oscar_es.cache", "get_product_elasticsearch_settings"
 )
@@ -20,11 +21,13 @@ get_product_elasticsearch_settings = get_class(
 
 class BaseProductFacetedSearchForm(FacetedSearchForm):
     def __init__(self, *args, **kwargs):
+        self.category = kwargs.pop("category", None)
         super().__init__(*args, **kwargs)
+        self.load_db_facets()
 
-        # Dynamically add facet fields from the database
-        product_es_settings = get_product_elasticsearch_settings()
-        for db_facet in product_es_settings.facets.all():
+    def load_db_facets(self):
+        db_facets = ProductFacet.get_facets_for_category(self.category)
+        for db_facet in db_facets:
             if db_facet.facet_type == ProductFacet.FACET_TYPE_TERM:
                 self.fields[db_facet.field] = DbFacetField(
                     es_field=db_facet.field,

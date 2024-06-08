@@ -2,12 +2,16 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.forms.models import BaseInlineFormSet
 
+from oscar.core.loading import get_model
+
 from ..models import (
     ProductElasticsearchSettings,
     ProductSearchField,
     ProductFacet,
     ProductFacetRangeOption,
 )
+
+Category = get_model("catalogue", "Category")
 
 
 class ProductSearchFieldForm(forms.ModelForm):
@@ -74,6 +78,13 @@ class ProductFacetedSearchForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["field"].choices = [("", "")] + ProductFacet.get_field_choices()
         self.fields["formatter"].choices = ProductFacet.get_formatter_choices()
+
+        # Only root categories are allowed to be chosen, otherwise the queries to get the allowed facets
+        # per category would get too complex and expensive. Also, I think having the option to configure facets
+        # for subcategories is not necessary.
+        root_categories = Category.objects.filter(depth=1)
+        self.fields["enabled_categories"].queryset = root_categories
+        self.fields["disabled_categories"].queryset = root_categories
 
 
 ProductFacetedSearchFormSet = inlineformset_factory(
