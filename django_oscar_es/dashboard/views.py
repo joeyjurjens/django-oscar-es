@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.contrib import messages
 from django.views.generic import TemplateView
 from django.shortcuts import redirect
 
@@ -53,4 +54,5 @@ class ProductElasticsearchSettingsView(TemplateView):
         context = self.get_context_data()
         context["search_fields_formset"] = search_fields_formset
         context["facets_formset"] = facets_formset
+        messages.error(request, "There were some errors on the form(s).")
         return self.render_to_response(context)
