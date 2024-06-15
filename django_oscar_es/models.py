@@ -62,6 +62,9 @@ class ProductSearchField(models.Model):
 
 
 class ProductFacet(models.Model):
+    class Meta:
+        ordering = ["order"]
+
     FACET_TYPE_TERM = "term"
     FACET_TYPE_RANGE = "range"
     FACET_TYPE_CHOICES = (
@@ -118,6 +121,11 @@ class ProductFacet(models.Model):
         help_text=_(
             "If this facet should be hidden for a specific set of categories, you can choose them here. If you leave this (and enabled categories) empty, the facet will be enabled for all categories."
         ),
+    )
+
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text=_("The order in which this facet should be displayed."),
     )
 
     def get_formatter(self):

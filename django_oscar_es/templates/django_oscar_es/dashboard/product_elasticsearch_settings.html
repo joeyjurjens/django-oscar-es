@@ -1,6 +1,6 @@
 {% extends "oscar/dashboard/layout.html" %}
 
-{% load i18n %}
+{% load i18n static %}
 
 {% block headertext %}
     Product Elasticsearch Settings
@@ -8,20 +8,8 @@
 
 {% block extrascripts %}
     {{ block.super }}
-    <script>
-        $(document).ready(function() {
-            $('select[name^="facets-"][name$="-facet_type"]').change(function() {
-                const rangeOptionsTableContainer = $(this).closest('tr').next().find('#range-options-table-container');
-                if ($(this).val() === 'range') {
-                    rangeOptionsTableContainer.show();
-                } else {
-                    rangeOptionsTableContainer.hide();
-                }
-            });
-            
-            $('select[name^="facets-"][name$="-facet_type"]').trigger('change');
-        });
-    </script>
+    <script src="{% static 'django_oscar_es/js/jquery-ui.min.js' %}"></script>
+    <script src="{% static 'django_oscar_es/js/dashboard.js' %}"></script>
 {% endblock %}
 
 {% block dashboard_content %}
@@ -63,6 +51,7 @@
         <table class="table table-striped">
             <thead>
                 <tr>
+                    <th></th>
                     <th>Field</th>
                     <th>Label</th>
                     <th>Facet Type</th>
@@ -73,20 +62,50 @@
                     <th>Delete</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="facet-tbody">
                 {% for form in facets_formset %}
-                    <tr>
-                        <td>{{ form.id }}{{ form.field }}</td>
-                        <td>{{ form.label }}</td>
-                        <td>{{ form.facet_type }}</td>
-                        <td>{{ form.size }}</td>
-                        <td>{{ form.formatter }}</td>
-                        <td>{{ form.enabled_categories }}</td>
-                        <td>{{ form.disabled_categories }}</td>
-                        <td>{{ form.DELETE }}</td>
+                    <tr class="sortable-row" id="facet-{{ forloop.counter0 }}">
+                        <td>
+                            <span class="sortable-handle">&#9776;</span>
+                        </td>
+                        <td>
+                            {# Hidden fields for the formset #}
+                            {{ form.id }} {{form.order }} 
+                            
+                            {# The actual form field for this td #}
+                            {{ form.field }}
+                            {{ form.field.errors }}
+                        </td>
+                        <td>
+                            {{ form.label }}
+                        </td>
+                        <td>
+                            {{ form.facet_type }}
+                            {{ form.facet_type.errors }}
+                        </td>
+                        <td>
+                            {{ form.size }}
+                            {{ form.size.errors }}
+                        </td>
+                        <td>
+                            {{ form.formatter }}
+                            {{ form.formatter.errors }}
+                        </td>
+                        <td>
+                            {{ form.enabled_categories }}
+                            {{ form.enabled_categories.errors }}
+                        </td>
+                        <td>
+                            {{ form.disabled_categories }}
+                            {{ form.disabled_categories.errors }}
+                        </td>
+                        <td>
+                            {{ form.DELETE }}
+                        </td>
                     </tr>
                     {% if form.nested %}
-                        <tr>
+                        <tr data-nested-for="facet-{{ forloop.counter0 }}">
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td colspan="6">

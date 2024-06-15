@@ -1,3 +1,4 @@
+from typing import Any
 from django import forms
 from django.forms import inlineformset_factory
 from django.forms.models import BaseInlineFormSet
@@ -47,11 +48,12 @@ class ProductFacetInlineFormset(BaseInlineFormSet):
         )
 
     def is_valid(self):
-        result = super().is_valid()
+        is_valid = super().is_valid()
+
         for form in self.forms:
             if hasattr(form, "nested"):
-                result = result and form.nested.is_valid()
-        return result
+                is_valid = is_valid and form.nested.is_valid()
+        return is_valid
 
     def save(self, commit=True):
         result = super().save(commit=commit)
@@ -72,7 +74,11 @@ class ProductFacetedSearchForm(forms.ModelForm):
             "formatter",
             "enabled_categories",
             "disabled_categories",
+            "order",
         ]
+        widgets = {
+            "order": forms.HiddenInput(),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,6 +91,16 @@ class ProductFacetedSearchForm(forms.ModelForm):
         root_categories = Category.objects.filter(depth=1)
         self.fields["enabled_categories"].queryset = root_categories
         self.fields["disabled_categories"].queryset = root_categories
+
+    def has_changed(self):
+        # The form is considered unchanged if only the 'order' field has changed and the form has no instance yet.
+        if (
+            self.instance.pk is None
+            and self.empty_permitted
+            and self.changed_data == ["order"]
+        ):
+            return False
+        return super().has_changed()
 
 
 ProductFacetedSearchFormSet = inlineformset_factory(
