@@ -14,6 +14,12 @@ $(document).ready(function() {
         items: ".sortable-row",
         cursor: "grabbing",
         handle: ".sortable-handle",
+        start: function(event, ui) {
+            $("tr[data-nested-for='" + ui.item.attr('id') + "']").hide();
+        },
+        stop: function(event, ui) {
+            $("tr[data-nested-for='" + ui.item.attr('id') + "']").detach().insertAfter(ui.item).show();
+        },
         update: function(event, ui) {
             updateFacetOrdering();
         }

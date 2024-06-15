@@ -64,7 +64,7 @@
             </thead>
             <tbody id="facet-tbody">
                 {% for form in facets_formset %}
-                    <tr class="sortable-row">
+                    <tr class="sortable-row" id="facet-{{ forloop.counter0 }}">
                         <td>
                             <span class="sortable-handle">&#9776;</span>
                         </td>
@@ -104,7 +104,7 @@
                         </td>
                     </tr>
                     {% if form.nested %}
-                        <tr>
+                        <tr data-nested-for="facet-{{ forloop.counter0 }}">
                             <td></td>
                             <td></td>
                             <td></td>

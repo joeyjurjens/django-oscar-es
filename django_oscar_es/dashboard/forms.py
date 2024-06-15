@@ -93,15 +93,12 @@ class ProductFacetedSearchForm(forms.ModelForm):
         self.fields["disabled_categories"].queryset = root_categories
 
     def has_changed(self):
-        """
-        Determines if the form has changed, excluding the hidden 'order' field for empty forms.
-        """
+        # The form is considered unchanged if only the 'order' field has changed and the form has no instance yet.
         if (
             self.instance.pk is None
             and self.empty_permitted
             and self.changed_data == ["order"]
         ):
-            # If it's an empty form and only 'order' field has changed, consider it unchanged
             return False
         return super().has_changed()
 
